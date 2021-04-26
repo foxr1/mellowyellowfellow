@@ -3,7 +3,13 @@ guid: ccdc9f7ae4b962548a41d6999bf74d09
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - highScoreUI: {instanceID: 0}
+  - mainMenuUI: {instanceID: 0}
+  - gameUI: {instanceID: 0}
+  - winUI: {instanceID: 0}
+  - playerObject: {instanceID: 0}
+  - ghost: {fileID: 2230023846726348446, guid: 420e9ccf035f7f944acc6a71eade7757, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

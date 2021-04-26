@@ -19,8 +19,13 @@ public class YellowFellowGame : MonoBehaviour
     [SerializeField]
     Fellow playerObject;
 
-    GameObject[] pellets;
+    [SerializeField]
+    GameObject ghostHouse;
 
+    public GameObject[] pellets;
+
+    // Timers
+    public float scatterTime, chaseTime;
 
     enum GameMode
     {
@@ -51,6 +56,20 @@ public class YellowFellowGame : MonoBehaviour
         if (playerObject.PelletsEaten() == pellets.Length)
         {
             Debug.Log("Level Complete!");
+        }
+
+        // Global timers for scatter and chase mode
+        scatterTime = Mathf.Max(0.0f, scatterTime - Time.deltaTime); // 7 seconds of scatter mode based on documentation given on ghost behaviour
+
+        if (gameMode == GameMode.InGame && scatterTime <= 0.0f)
+        {
+            chaseTime = Mathf.Max(0.0f, chaseTime - Time.deltaTime);
+
+            if (chaseTime <= 0.0f)
+            {
+                scatterTime = 7.0f;
+                chaseTime = 20.0f;
+            }
         }
     }
 
@@ -83,6 +102,7 @@ public class YellowFellowGame : MonoBehaviour
     {
         gameMode                        = GameMode.MainMenu;
         mainMenuUI.gameObject.SetActive(true);
+        GetComponent<UIFader>().FadeIn();
         highScoreUI.gameObject.SetActive(false);
         gameUI.gameObject.SetActive(false);
     }
@@ -96,11 +116,34 @@ public class YellowFellowGame : MonoBehaviour
         gameUI.gameObject.SetActive(false);
     }
 
-    void StartGame()
+    public void StartGame()
     {
         gameMode                = GameMode.InGame;
-        mainMenuUI.gameObject.SetActive(false);
+        //mainMenuUI.gameObject.SetActive(false);
         highScoreUI.gameObject.SetActive(false);
         gameUI.gameObject.SetActive(true);
+
+        // Fade out menu
+        GetComponent<UIFader>().FadeOut();
+
+        // Only red and pink ghosts are first to move when game starts
+        GameObject.Find("RedGhost").GetComponent<RedGhost>().canMove = true;
+        GameObject.Find("PinkGhost").GetComponent<PinkGhost>().canMove = true;
+
+        // Based on ghost behaviour document given
+        scatterTime = 7.0f;
+        chaseTime = 20.0f;
+    }
+
+    public bool inGame()
+    {
+        if (gameMode == GameMode.InGame)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 }

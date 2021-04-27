@@ -126,10 +126,6 @@ public class YellowFellowGame : MonoBehaviour
         // Fade out menu
         GetComponent<UIFader>().FadeOut();
 
-        // Only red and pink ghosts are first to move when game starts
-        GameObject.Find("RedGhost").GetComponent<RedGhost>().canMove = true;
-        GameObject.Find("PinkGhost").GetComponent<PinkGhost>().canMove = true;
-
         // Based on ghost behaviour document given
         scatterTime = 7.0f;
         chaseTime = 20.0f;

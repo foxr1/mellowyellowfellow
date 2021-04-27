@@ -13,10 +13,13 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
     // Materials
     [SerializeField]
     Material scaredMaterial;
+    [SerializeField]
+    Material deadMaterial;
     Material normalMaterial;
 
     bool hiding = false;
     bool canMove = false;
+    bool respawned = false;
     public bool hasDied = false; // For when the ghost has been killed by the player when powerup is active
 
     [SerializeField]
@@ -51,7 +54,11 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
 
         if (canMove)
         {
-            if (player.PowerupActive() && !hasDied)
+            if (hasDied)
+            {
+                agent.destination = ghostHouse.transform.position;
+            }
+            else if (player.PowerupActive() && !hasDied & !respawned)
             {
                 Debug.Log("Hiding from player");
                 if (!hiding || agent.remainingDistance < 0.5f)
@@ -61,9 +68,10 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
                     GetComponent<Renderer>().material = scaredMaterial;
                 }
             }
-            else if (hasDied)
+            else if (!player.PowerupActive() && respawned)
             {
-                agent.destination = ghostHouse.transform.position;
+                // Once powerup has ended set respawned back to false
+                respawned = false;
             }
             else
             {
@@ -154,12 +162,17 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("GhostHouse"))
+        if (hasDied && other.gameObject.CompareTag("GhostHouse"))
         {
             hasDied = false;
             hiding = false;
+            respawned = true;
             GetComponent<Renderer>().material = normalMaterial;
-            GetComponent<CapsuleCollider>().enabled = true;
+
+            // Return speed back to normal
+            agent.speed = 3.5f;
+            agent.acceleration = 8f;
+            agent.angularSpeed = 120f;
         }
         else if (other.gameObject.CompareTag("LeftPortal"))
         {
@@ -180,10 +193,21 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
     void GhostInterface.died()
     {
         hasDied = true;
+        GetComponent<Renderer>().material = deadMaterial; // Transparent material
+
+        // Increase speed so it returns to ghost house quicker
+        agent.speed = 6f;
+        agent.acceleration = 12f;
+        agent.angularSpeed = 240f;
     }
 
     public void resetGhost()
     {
-        this.gameObject.transform.position = startPos;
+        gameObject.transform.position = startPos;
+    }
+
+    public bool hasRespawned()
+    {
+        return respawned;
     }
 }

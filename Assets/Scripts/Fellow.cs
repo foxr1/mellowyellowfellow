@@ -110,7 +110,7 @@ public class Fellow : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Ghost"))
         {
-            if (PowerupActive())
+            if (PowerupActive() && !collision.gameObject.GetComponent<GhostInterface>().hasRespawned())
             {
                 collision.gameObject.GetComponent<GhostInterface>().died();
                 score += 200;

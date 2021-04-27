@@ -7,6 +7,7 @@ public interface GhostInterface
 {
     void died();
     void resetGhost();
+    bool hasRespawned();
 }
 
 public class RedGhost : MonoBehaviour, GhostInterface
@@ -19,10 +20,12 @@ public class RedGhost : MonoBehaviour, GhostInterface
     // Materials
     [SerializeField]
     Material scaredMaterial;
+    [SerializeField]
+    Material deadMaterial;
     Material normalMaterial;
 
     bool hiding = false;
-    public bool canMove = false; // Public so when game starts it can be set to true
+    bool respawned = false; // For when the ghost returns back to ghost house so game knows not to keep ghost in powered state after returning
     public bool hasDied = false; // For when the ghost has been killed by the player when powerup is active
 
     [SerializeField]
@@ -51,7 +54,11 @@ public class RedGhost : MonoBehaviour, GhostInterface
 
         if (game.GetComponent<YellowFellowGame>().inGame())
         {
-            if (player.PowerupActive() && !hasDied)
+            if (hasDied)
+            {
+                agent.destination = ghostHouse.transform.position;
+            }
+            else if (player.PowerupActive() && !hasDied & !respawned)
             {
                 Debug.Log("Hiding from player");
                 if (!hiding || agent.remainingDistance < 0.5f)
@@ -61,9 +68,10 @@ public class RedGhost : MonoBehaviour, GhostInterface
                     GetComponent<Renderer>().material = scaredMaterial;
                 }
             }
-            else if (hasDied)
+            else if (!player.PowerupActive() && respawned)
             {
-                agent.destination = ghostHouse.transform.position;
+                // Once powerup has ended set respawned back to false
+                respawned = false;
             }
             else
             {
@@ -139,36 +147,48 @@ public class RedGhost : MonoBehaviour, GhostInterface
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("GhostHouse"))
+        if (hasDied && other.gameObject.CompareTag("GhostHouse"))
         {
             hasDied = false;
             hiding = false;
+            respawned = true;
             GetComponent<Renderer>().material = normalMaterial;
-            GetComponent<CapsuleCollider>().enabled = true;
+
+            // Return speed back to normal
+            agent.speed = 3.5f;
+            agent.acceleration = 8f;
+            agent.angularSpeed = 120f;
         }
         else if (other.gameObject.CompareTag("LeftPortal"))
         {
             Vector3 rightPortalPos = GameObject.FindGameObjectWithTag("RightPortal").transform.position;
-            this.gameObject.transform.position = new Vector3(rightPortalPos.x, 0.65f, rightPortalPos.z);
+            transform.position = new Vector3(rightPortalPos.x - 2, 0.65f, rightPortalPos.z);
         }
         else if (other.gameObject.CompareTag("RightPortal"))
         {
             Vector3 leftPortalPos = GameObject.FindGameObjectWithTag("LeftPortal").transform.position;
-            this.gameObject.transform.position = new Vector3(leftPortalPos.x, 0.65f, leftPortalPos.z);
-        }
-        else
-        {
-            canMove = true;
+            transform.position = new Vector3(leftPortalPos.x + 2, 0.65f, leftPortalPos.z);
         }
     }
 
     void GhostInterface.died()
     {
         hasDied = true;
+        GetComponent<Renderer>().material = deadMaterial; // Transparent material
+
+        // Increase speed so it returns to ghost house quicker
+        agent.speed = 6f;
+        agent.acceleration = 12f;
+        agent.angularSpeed = 240f;
     }
 
     public void resetGhost()
     {
         gameObject.transform.position = startPos;
+    }
+
+    public bool hasRespawned()
+    {
+        return respawned;
     }
 }

@@ -6,13 +6,17 @@ using UnityEngine.AI;
 public interface GhostInterface
 {
     void died();
-    void resetGhost();
-    bool hasRespawned();
+    Vector3 GetStartPos();
+    void SetStartPos(Vector3 startPos);
+    void ResetGhost();
+    bool HasRespawned();
+    void ResetRespawn();
+    void SetNavMeshAgent(bool enabled);
 }
 
 public class RedGhost : MonoBehaviour, GhostInterface
 {
-    NavMeshAgent agent;
+    public NavMeshAgent agent;
 
     [SerializeField]
     Fellow player;
@@ -52,13 +56,13 @@ public class RedGhost : MonoBehaviour, GhostInterface
         scatterTime = game.GetComponent<YellowFellowGame>().scatterTime;
         chaseTime = game.GetComponent<YellowFellowGame>().chaseTime;
 
-        if (game.GetComponent<YellowFellowGame>().inGame())
+        if (game.GetComponent<YellowFellowGame>().InGame())
         {
             if (hasDied)
             {
                 agent.destination = ghostHouse.transform.position;
             }
-            else if (player.PowerupActive() && !hasDied & !respawned)
+            else if (player.PowerupActive() && !hasDied && !respawned)
             {
                 Debug.Log("Hiding from player");
                 if (!hiding || agent.remainingDistance < 0.5f)
@@ -147,6 +151,9 @@ public class RedGhost : MonoBehaviour, GhostInterface
 
     private void OnTriggerEnter(Collider other)
     {
+        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/LeftTeleporter");
+        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/RightTeleporter");
+
         if (hasDied && other.gameObject.CompareTag("GhostHouse"))
         {
             hasDied = false;
@@ -158,16 +165,22 @@ public class RedGhost : MonoBehaviour, GhostInterface
             agent.speed = 3.5f;
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
+
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), false);
         }
-        else if (other.gameObject.CompareTag("LeftPortal"))
+        else if (other.gameObject == currentLeftTeleporter)
         {
-            Vector3 rightPortalPos = GameObject.FindGameObjectWithTag("RightPortal").transform.position;
+            agent.enabled = false;
+            Vector3 rightPortalPos = currentRightTeleporter.transform.position;
             transform.position = new Vector3(rightPortalPos.x - 2, 0.65f, rightPortalPos.z);
+            agent.enabled = true;
         }
-        else if (other.gameObject.CompareTag("RightPortal"))
+        else if (other.gameObject == currentRightTeleporter)
         {
-            Vector3 leftPortalPos = GameObject.FindGameObjectWithTag("LeftPortal").transform.position;
+            agent.enabled = false;
+            Vector3 leftPortalPos = currentLeftTeleporter.transform.position;
             transform.position = new Vector3(leftPortalPos.x + 2, 0.65f, leftPortalPos.z);
+            agent.enabled = true;
         }
     }
 
@@ -176,19 +189,44 @@ public class RedGhost : MonoBehaviour, GhostInterface
         hasDied = true;
         GetComponent<Renderer>().material = deadMaterial; // Transparent material
 
+        // Disable collisions with player to avoid unintended contact
+        Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), true);
+
         // Increase speed so it returns to ghost house quicker
         agent.speed = 6f;
         agent.acceleration = 12f;
         agent.angularSpeed = 240f;
     }
 
-    public void resetGhost()
+    public Vector3 GetStartPos()
     {
-        gameObject.transform.position = startPos;
+        return startPos;
     }
 
-    public bool hasRespawned()
+    public void SetStartPos(Vector3 newStartPos)
+    {
+        startPos = newStartPos;
+    }
+
+    public void ResetGhost()
+    {
+        agent.enabled = false;
+        transform.position = startPos;
+        GetComponent<Renderer>().material = normalMaterial;
+        agent.enabled = true;
+    }
+
+    public bool HasRespawned()
     {
         return respawned;
+    }
+    public void ResetRespawn()
+    {
+        respawned = false;
+    }
+
+    public void SetNavMeshAgent(bool enabled)
+    {
+        agent.enabled = enabled;
     }
 }

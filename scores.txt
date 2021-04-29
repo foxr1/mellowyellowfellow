@@ -8,3 +8,5 @@ Izzie 7500
 Chris 8000
 Ash 8600
 Dan -1
+Ollie 700
+Test 10000

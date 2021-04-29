@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -39,7 +40,8 @@ public class HighScoreTable : MonoBehaviour
 
     void CreateHighScoreText()
     {
-        for (int i = 0; i < allScores.Count; ++i)
+        // Changed to end loop at 10 to remove overflowing out of UI when loading high scores
+        for (int i = 0; i < 10; ++i) 
         {
             GameObject o = new GameObject();
             o.transform.parent = transform;
@@ -61,6 +63,13 @@ public class HighScoreTable : MonoBehaviour
     public void SortHighScoreEntries()
     {
         allScores.Sort((x, y) => y.score.CompareTo(x.score));
+    }
+
+    public void SaveScore(string name, int score)
+    {
+        using StreamWriter file = new StreamWriter(highScoreFile, true);
+        file.WriteLine("\n" + name + " " + score.ToString());
+        file.Close();
     }
 
     // Start is called before the first frame update

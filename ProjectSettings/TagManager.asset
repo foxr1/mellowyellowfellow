@@ -5,13 +5,16 @@ TagManager:
   serializedVersion: 2
   tags:
   - Wall
-  - Pellet
   - Ghost
   - Fellow
   - Powerup
   - LeftPortal
   - RightPortal
   - GhostHouse
+  - L1Pellet
+  - L2Pellet
+  - Pellet
+  - L3Pellet
   layers:
   - Default
   - TransparentFX
@@ -23,7 +26,7 @@ TagManager:
   - Fellow
   - Ghost
   - Portal
-  - 
+  - GhostDoor
   - 
   - 
   - 

@@ -7,13 +7,13 @@ public class UIFader : MonoBehaviour
     [SerializeField]
     CanvasGroup uiElement;
     
-    public void FadeIn()
+    public void FadeIn(float lerpTime)
     {
-        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 1));
+        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 1, lerpTime));
     }
-    public void FadeOut()
+    public void FadeOut(float lerpTime)
     {
-        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 0));
+        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 0, lerpTime));
     }
 
     public IEnumerator FadeCanvasGroup(CanvasGroup cg, float start, float end, float lerpTime = 1f)

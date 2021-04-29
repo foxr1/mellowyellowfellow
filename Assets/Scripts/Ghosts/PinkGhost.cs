@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 public class PinkGhost : MonoBehaviour, GhostInterface
 {
-    NavMeshAgent agent;
+    public NavMeshAgent agent;
 
     [SerializeField]
     Fellow player;
@@ -45,15 +45,14 @@ public class PinkGhost : MonoBehaviour, GhostInterface
         scatterTime = game.GetComponent<YellowFellowGame>().scatterTime;
         chaseTime = game.GetComponent<YellowFellowGame>().chaseTime;
 
-        if (game.GetComponent<YellowFellowGame>().inGame())
+        if (game.GetComponent<YellowFellowGame>().InGame())
         {
             if (hasDied)
             {
                 agent.destination = ghostHouse.transform.position;
             }
-            else if (player.PowerupActive() && !hasDied & !respawned)
+            else if (player.PowerupActive() && !hasDied && !respawned)
             {
-                Debug.Log("Hiding from player");
                 if (!hiding || agent.remainingDistance < 0.5f)
                 {
                     hiding = true;
@@ -68,7 +67,6 @@ public class PinkGhost : MonoBehaviour, GhostInterface
             }
             else
             {
-                Debug.Log("Chasing Player!");
                 if (hiding)
                 {
                     GetComponent<Renderer>().material = normalMaterial;
@@ -77,7 +75,6 @@ public class PinkGhost : MonoBehaviour, GhostInterface
 
                 if (scatterTime > 0.0f)
                 {
-                    Debug.Log("scatter");
                     if (agent.remainingDistance < 0.5)
                     {
                         agent.destination = PickRandomPosition();
@@ -87,7 +84,6 @@ public class PinkGhost : MonoBehaviour, GhostInterface
                 }
                 else
                 {
-                    Debug.Log("chase");
                     if (chaseTime > 0.0f)
                     {
                         // Pink ghost follows player "4 tiles" in front of actual position according to
@@ -163,6 +159,9 @@ public class PinkGhost : MonoBehaviour, GhostInterface
 
     private void OnTriggerEnter(Collider other)
     {
+        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/LeftTeleporter");
+        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/RightTeleporter");
+
         if (hasDied && other.gameObject.CompareTag("GhostHouse"))
         {
             hasDied = false;
@@ -174,16 +173,22 @@ public class PinkGhost : MonoBehaviour, GhostInterface
             agent.speed = 3.5f;
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
+
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), false);
         }
-        else if (other.gameObject.CompareTag("LeftPortal"))
+        else if (other.gameObject == currentLeftTeleporter)
         {
-            Vector3 rightPortalPos = GameObject.FindGameObjectWithTag("RightPortal").transform.position;
-            this.gameObject.transform.position = new Vector3(rightPortalPos.x, 0.65f, rightPortalPos.z);
+            agent.enabled = false;
+            Vector3 rightPortalPos = currentRightTeleporter.transform.position;
+            transform.position = new Vector3(rightPortalPos.x - 2, 0.65f, rightPortalPos.z);
+            agent.enabled = true;
         }
-        else if (other.gameObject.CompareTag("RightPortal"))
+        else if (other.gameObject == currentRightTeleporter)
         {
-            Vector3 leftPortalPos = GameObject.FindGameObjectWithTag("LeftPortal").transform.position;
-            this.gameObject.transform.position = new Vector3(leftPortalPos.x, 0.65f, leftPortalPos.z);
+            agent.enabled = false;
+            Vector3 leftPortalPos = currentLeftTeleporter.transform.position;
+            transform.position = new Vector3(leftPortalPos.x + 2, 0.65f, leftPortalPos.z);
+            agent.enabled = true;
         }
     }
 
@@ -192,19 +197,44 @@ public class PinkGhost : MonoBehaviour, GhostInterface
         hasDied = true;
         GetComponent<Renderer>().material = deadMaterial; // Transparent material
 
+        // Disable collisions with player to avoid unintended contact
+        Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), true);
+
         // Increase speed so it returns to ghost house quicker
         agent.speed = 6f;
         agent.acceleration = 12f;
         agent.angularSpeed = 240f;
     }
 
-    public void resetGhost()
+    public Vector3 GetStartPos()
     {
-        gameObject.transform.position = startPos;
+        return startPos;
     }
 
-    public bool hasRespawned()
+    public void SetStartPos(Vector3 newStartPos)
+    {
+        startPos = newStartPos;
+    }
+
+    public void ResetGhost()
+    {
+        agent.enabled = false;
+        transform.position = startPos;
+        GetComponent<Renderer>().material = normalMaterial;
+        agent.enabled = true;
+    }
+
+    public bool HasRespawned()
     {
         return respawned;
+    }
+    public void ResetRespawn()
+    {
+        respawned = false;
+    }
+
+    public void SetNavMeshAgent(bool enabled)
+    {
+        agent.enabled = enabled;
     }
 }

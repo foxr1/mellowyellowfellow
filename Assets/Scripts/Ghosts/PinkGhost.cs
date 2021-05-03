@@ -7,8 +7,7 @@ public class PinkGhost : MonoBehaviour, GhostInterface
 {
     public NavMeshAgent agent;
 
-    [SerializeField]
-    Fellow player;
+    FellowInterface player;
 
     // Materials
     [SerializeField]
@@ -34,7 +33,7 @@ public class PinkGhost : MonoBehaviour, GhostInterface
     void Start()
     {
         normalMaterial = GetComponent<Renderer>().material;
-
+        player = GameObject.Find("Fellow").GetComponent<FellowInterface>();
         agent = GetComponent<NavMeshAgent>();
     }
 
@@ -91,20 +90,20 @@ public class PinkGhost : MonoBehaviour, GhostInterface
                         // where they should be following.
 
                         Vector3 targetPos = Vector3.zero;
-                        Vector3 playerPos = player.transform.position;
-                        if (player.GetComponent<Fellow>().direction.Equals("left"))
+                        Vector3 playerPos = player.GetPosition();
+                        if (player.GetDirection().Equals("left"))
                         {
                             targetPos = new Vector3(playerPos.x - 4, playerPos.y, playerPos.z);
                         }
-                        else if (player.GetComponent<Fellow>().direction.Equals("right"))
+                        else if (player.GetDirection().Equals("right"))
                         {
                             targetPos = new Vector3(playerPos.x + 4, playerPos.y, playerPos.z);
                         }
-                        else if (player.GetComponent<Fellow>().direction.Equals("up"))
+                        else if (player.GetDirection().Equals("up"))
                         {
                             targetPos = new Vector3(playerPos.x, playerPos.y, playerPos.z + 4);
                         }
-                        else if (player.GetComponent<Fellow>().direction.Equals("down"))
+                        else if (player.GetDirection().Equals("down"))
                         {
                             targetPos = new Vector3(playerPos.x, playerPos.y, playerPos.z - 4);
                         }
@@ -133,7 +132,7 @@ public class PinkGhost : MonoBehaviour, GhostInterface
 
     Vector3 PickHidingPlace()
     {
-        Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
+        Vector3 directionToPlayer = (player.GetPosition() - transform.position).normalized;
 
         NavMeshHit navHit;
         NavMesh.SamplePosition(transform.position - (directionToPlayer * 8.0f), out navHit, 8.0f, NavMesh.AllAreas);
@@ -144,7 +143,7 @@ public class PinkGhost : MonoBehaviour, GhostInterface
     bool CanSeePlayer()
     {
         Vector3 rayPos = transform.position;
-        Vector3 rayDir = (player.transform.position - rayPos).normalized;
+        Vector3 rayDir = (player.GetPosition() - rayPos).normalized;
 
         RaycastHit info;
         if (Physics.Raycast(rayPos, rayDir, out info))
@@ -174,7 +173,12 @@ public class PinkGhost : MonoBehaviour, GhostInterface
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), false);
+            // Disable collisions for all types of fellow
+            GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+            foreach (GameObject fellow in fellows)
+            {
+                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
+            }
         }
         else if (other.gameObject == currentLeftTeleporter)
         {
@@ -197,8 +201,12 @@ public class PinkGhost : MonoBehaviour, GhostInterface
         hasDied = true;
         GetComponent<Renderer>().material = deadMaterial; // Transparent material
 
-        // Disable collisions with player to avoid unintended contact
-        Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), true);
+        // Disable collisions for all types of fellow
+        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+        foreach (GameObject fellow in fellows)
+        {
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), true);
+        }
 
         // Increase speed so it returns to ghost house quicker
         agent.speed = 6f;
@@ -236,5 +244,15 @@ public class PinkGhost : MonoBehaviour, GhostInterface
     public void SetNavMeshAgent(bool enabled)
     {
         agent.enabled = enabled;
+    }
+
+    public void SetSpeed(float speed)
+    {
+        agent.speed = speed;
+    }
+
+    public void SetPlayerTarget(FellowInterface fellow)
+    {
+        player = fellow;
     }
 }

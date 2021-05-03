@@ -7,8 +7,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
 {
     public NavMeshAgent agent;
 
-    [SerializeField]
-    Fellow player;
+    FellowInterface player;
 
     // Materials
     [SerializeField]
@@ -35,7 +34,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
     void Start()
     {
         normalMaterial = GetComponent<Renderer>().material;
-
+        player = GameObject.Find("Fellow").GetComponent<FellowInterface>();
         agent = GetComponent<NavMeshAgent>();
     }
 
@@ -99,13 +98,13 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
                             // When looking at the logged distance it very rarely will be a distance of 8 away,
                             // so I lowered this number to factor for this.
 
-                            Vector3 playerPos = player.transform.position;
+                            Vector3 playerPos = player.GetPosition();
                             Vector3 ghostPos = this.transform.position;
                             float distanceAway = Vector3.Distance(playerPos, ghostPos);
 
                             if (distanceAway > 5)
                             {
-                                agent.destination = player.transform.position;
+                                agent.destination = player.GetPosition();
                             }
                             else
                             {
@@ -135,7 +134,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
 
     Vector3 PickHidingPlace()
     {
-        Vector3 directionToPlayer = (player.transform.position - transform.position).normalized;
+        Vector3 directionToPlayer = (player.GetPosition() - transform.position).normalized;
 
         NavMeshHit navHit;
         NavMesh.SamplePosition(transform.position - (directionToPlayer * 8.0f), out navHit, 8.0f, NavMesh.AllAreas);
@@ -146,7 +145,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
     bool CanSeePlayer()
     {
         Vector3 rayPos = transform.position;
-        Vector3 rayDir = (player.transform.position - rayPos).normalized;
+        Vector3 rayDir = (player.GetPosition() - rayPos).normalized;
 
         RaycastHit info;
         if (Physics.Raycast(rayPos, rayDir, out info))
@@ -176,7 +175,12 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), false);
+            // Disable collisions for all types of fellow
+            GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+            foreach (GameObject fellow in fellows)
+            {
+                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
+            }
         }
         else if (other.gameObject == currentLeftTeleporter)
         {
@@ -203,8 +207,12 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
         hasDied = true;
         GetComponent<Renderer>().material = deadMaterial; // Transparent material
 
-        // Disable collisions with player to avoid unintended contact
-        Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), GameObject.Find("Fellow").GetComponent<SphereCollider>(), true);
+        // Disable collisions for all types of fellow
+        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+        foreach (GameObject fellow in fellows)
+        {
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), true);
+        }
 
         // Increase speed so it returns to ghost house quicker
         agent.speed = 6f;
@@ -242,5 +250,15 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
     public void SetNavMeshAgent(bool enabled)
     {
         agent.enabled = enabled;
+    }
+
+    public void SetSpeed(float speed)
+    {
+        agent.speed = speed;
+    }
+
+    public void SetPlayerTarget(FellowInterface fellow)
+    {
+        player = fellow;
     }
 }

@@ -10,7 +10,6 @@ public class CameraMovement : MonoBehaviour
     private float speed = 1f;
     private Vector3 startPos, startUIPos, nextLevelPos, levelUIPos;
     private GameObject userInterface;
-    private bool isFP = false;
 
     private void Start()
     {
@@ -22,13 +21,13 @@ public class CameraMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(90, 0, 0), Time.deltaTime * speed);
+        transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(90, 0, 0), Time.deltaTime * speed);
     }
 
-    public IEnumerator MoveCameraToNextLevel()
+    public IEnumerator MoveCameraToLevel(int currentLevel, int nextLevel)
     {
-        nextLevelPos = new Vector3(transform.position.x + 31.0f, transform.position.y, transform.position.z);
-        levelUIPos = new Vector3(userInterface.transform.position.x + 31.0f, userInterface.transform.position.y, userInterface.transform.position.z);
+        nextLevelPos = new Vector3(transform.position.x + ((nextLevel - currentLevel) * 31.0f), transform.position.y, transform.position.z);
+        levelUIPos = new Vector3(userInterface.transform.position.x + ((nextLevel - currentLevel) * 31.0f), userInterface.transform.position.y, userInterface.transform.position.z);
 
         while (transform.position != nextLevelPos)
         {
@@ -51,13 +50,20 @@ public class CameraMovement : MonoBehaviour
     public IEnumerator AttachCameraToFellow()
     {
         Vector3 fpFellowPos = GameObject.Find("FPFellow").transform.position;
-        isFP = true;
+        GameObject canvas = GameObject.Find("FPUI");
 
         while (true)
         {
             fpFellowPos = GameObject.Find("FPFellow").transform.position;
             Vector3 cameraPos = new Vector3(fpFellowPos.x, 0.4f, fpFellowPos.z);
-            transform.position = Vector3.Lerp(transform.position, cameraPos, Time.deltaTime * 10);
+
+            // Update camera position to be fixed to player
+            transform.position = cameraPos;
+
+            // Keep first person UI in front of camera
+            canvas.transform.position = transform.position + transform.forward * 0.45f;
+            canvas.transform.rotation = new Quaternion(0.0f, transform.rotation.y, 0.0f, transform.rotation.w);
+
             yield return new WaitForEndOfFrame();
         }
     }

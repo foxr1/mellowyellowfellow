@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class FPFellow : MonoBehaviour
+public class FPFellow : MonoBehaviour, FellowInterface
 {
     // Game
     [SerializeField]
@@ -43,7 +43,7 @@ public class FPFellow : MonoBehaviour
     void Start()
     {
         // Get start position of player to reset to when player dies
-        startPos = this.gameObject.transform.position;
+        startPos = gameObject.transform.position;
         Physics.IgnoreCollision(GetComponent<SphereCollider>(), GameObject.Find("GhostHouse").GetComponent<BoxCollider>(), false);
     }
 
@@ -156,5 +156,15 @@ public class FPFellow : MonoBehaviour
     public int GetScore()
     {
         return score;
+    }
+
+    public Vector3 GetPosition()
+    {
+        return transform.position;
+    }
+
+    public string GetDirection()
+    {
+        return direction;
     }
 }

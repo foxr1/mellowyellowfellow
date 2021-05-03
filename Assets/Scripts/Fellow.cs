@@ -4,11 +4,11 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class Fellow : MonoBehaviour
+public class Fellow : MonoBehaviour, FellowInterface
 {
     // Game
     [SerializeField]
-    GameObject game;
+    YellowFellowGame game;
 
     // Character Movement
     [SerializeField]
@@ -34,7 +34,11 @@ public class Fellow : MonoBehaviour
 
     // Position
     public Vector3 startPos;
-    public string direction;
+    private string direction;
+
+    // Sounds
+    [SerializeField]
+    AudioSource deathSound;
 
     // Start is called before the first frame update
     void Start()
@@ -56,7 +60,7 @@ public class Fellow : MonoBehaviour
         Vector3 velocity = b.velocity;
 
         // Prevent player from moving until game has started
-        if (game.GetComponent<YellowFellowGame>().InGame())
+        if (game.InGame())
         {
             if (Input.GetKey(KeyCode.A))
             {
@@ -82,12 +86,17 @@ public class Fellow : MonoBehaviour
         }
     }
 
+    public string GetDirection()
+    {
+        return direction;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/LeftTeleporter");
         GameObject currentRightTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/RightTeleporter");
 
-        if (other.gameObject.CompareTag("L1Pellet") || other.gameObject.CompareTag("L2Pellet"))
+        if (other.gameObject.CompareTag("L" + game.CurrentMaze().ToString() + "Pellet"))
         {
             pelletsEaten++;
             score += pointsPerPellet;
@@ -133,6 +142,8 @@ public class Fellow : MonoBehaviour
             }
             else
             {
+                game.SetVolumeOfMusic(0.2f);
+                deathSound.Play(0);
                 lives--;
                 if (lives <= 0)
                 {
@@ -141,23 +152,50 @@ public class Fellow : MonoBehaviour
                 }
                 else
                 {
-                    // Reset fellow back to start position
-                    transform.position = startPos;
-
-                    // Reset all ghosts back to original positions
-                    GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
-                    foreach (GameObject ghost in ghosts)
-                    {
-                        ghost.GetComponent<GhostInterface>().ResetGhost();
-                        game.GetComponent<YellowFellowGame>().scatterTime = 7.0f; // Reset scatter time for ghosts
-                        game.GetComponent<YellowFellowGame>().chaseTime = 20.0f; // Reset chase time for ghosts
-                    }
+                    StartCoroutine(FellowDeath());
                 }
 
                 // Remove hearts from UI each time player dies
                 livesUI.transform.GetChild(lives).localScale = Vector3.zero;
             }
         }
+    }
+
+    public IEnumerator FellowDeath()
+    {
+        // Stop ghost movements
+        GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
+        foreach (GameObject ghost in ghosts)
+        {
+            ghost.GetComponent<GhostInterface>().SetSpeed(0f);
+        }
+
+        while (transform.localScale != Vector3.zero)
+        {
+            transform.localScale = Vector3.Lerp(transform.localScale, Vector3.zero, Time.deltaTime * 5f);
+            if (transform.localScale != Vector3.zero)
+            {
+                yield return new WaitForEndOfFrame();
+            }
+        }
+
+        // Reset fellow back to start position
+        transform.position = startPos;
+        transform.localScale = Vector3.one * 0.8f;
+
+        // Reset all ghosts back to original positions
+        foreach (GameObject ghost in ghosts)
+        {
+            ghost.GetComponent<GhostInterface>().ResetGhost();
+            game.scatterTime = 7.0f; // Reset scatter time for ghosts
+            game.chaseTime = 20.0f; // Reset chase time for ghosts
+            ghost.GetComponent<GhostInterface>().SetSpeed(3.5f);
+        }
+
+        // Return music back to full volume
+        game.SetVolumeOfMusic(1f);
+
+        yield break;
     }
 
     public int PelletsEaten()
@@ -178,5 +216,10 @@ public class Fellow : MonoBehaviour
     public int GetScore()
     {
         return score;
+    }
+
+    public Vector3 GetPosition()
+    {
+        return transform.position;
     }
 }

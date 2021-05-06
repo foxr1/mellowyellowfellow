@@ -34,7 +34,7 @@ public class Fellow : MonoBehaviour, FellowInterface
 
     // Position
     public Vector3 startPos;
-    private string direction;
+    private string direction = "up";
 
     // Sounds
     [SerializeField]
@@ -44,7 +44,7 @@ public class Fellow : MonoBehaviour, FellowInterface
     void Start()
     {
         // Get start position of player to reset to when player dies
-        startPos = this.gameObject.transform.position;
+        startPos = transform.position;
         Physics.IgnoreCollision(GetComponent<SphereCollider>(), GameObject.Find("GhostHouse").GetComponent<BoxCollider>(), false);
     }
 
@@ -83,6 +83,9 @@ public class Fellow : MonoBehaviour, FellowInterface
                 direction = "down";
             }
             b.velocity = velocity;
+        } else
+        {
+            b.velocity = Vector3.zero;
         }
     }
 
@@ -93,8 +96,12 @@ public class Fellow : MonoBehaviour, FellowInterface
 
     private void OnTriggerEnter(Collider other)
     {
-        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/LeftTeleporter");
-        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/RightTeleporter");
+        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/LeftTeleporter");
+        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/RightTeleporter");
+
+        // Declare extra teleporters for third maze
+        GameObject topLeftTeleporter = GameObject.Find("Maze3/TopLeftTeleporter");
+        GameObject topRightTeleporter = GameObject.Find("Maze3/TopRightTeleporter");
 
         if (other.gameObject.CompareTag("L" + game.CurrentMaze().ToString() + "Pellet"))
         {
@@ -124,6 +131,16 @@ public class Fellow : MonoBehaviour, FellowInterface
             Vector3 leftPortalPos = currentLeftTeleporter.transform.position;
             transform.position = new Vector3(leftPortalPos.x + 1.5f, leftPortalPos.y, leftPortalPos.z);
         }
+        else if (other.gameObject == topLeftTeleporter)
+        {
+            Vector3 rightPortalPos = topRightTeleporter.transform.position;
+            transform.position = new Vector3(rightPortalPos.x - 1.5f, rightPortalPos.y, rightPortalPos.z);
+        }
+        else if (other.gameObject == topRightTeleporter)
+        {
+            Vector3 leftPortalPos = topLeftTeleporter.transform.position;
+            transform.position = new Vector3(leftPortalPos.x + 1.5f, leftPortalPos.y, leftPortalPos.z);
+        }
     }
 
     public bool PowerupActive()
@@ -142,9 +159,13 @@ public class Fellow : MonoBehaviour, FellowInterface
             }
             else
             {
+                // Disable collisions to stop accidental triggers while death is occuring
+                Physics.IgnoreCollision(GetComponent<SphereCollider>(), collision.collider, true);
+
                 game.SetVolumeOfMusic(0.2f);
                 deathSound.Play(0);
                 lives--;
+                
                 if (lives <= 0)
                 {
                     Debug.Log("You Died");
@@ -152,16 +173,15 @@ public class Fellow : MonoBehaviour, FellowInterface
                 }
                 else
                 {
-                    StartCoroutine(FellowDeath());
+                    StartCoroutine(FellowDeath(collision.collider));
                 }
 
-                // Remove hearts from UI each time player dies
                 livesUI.transform.GetChild(lives).localScale = Vector3.zero;
             }
         }
     }
 
-    public IEnumerator FellowDeath()
+    public IEnumerator FellowDeath(Collider ghostCollider)
     {
         // Stop ghost movements
         GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
@@ -170,6 +190,7 @@ public class Fellow : MonoBehaviour, FellowInterface
             ghost.GetComponent<GhostInterface>().SetSpeed(0f);
         }
 
+        // Animate scale of fellow to 0 
         while (transform.localScale != Vector3.zero)
         {
             transform.localScale = Vector3.Lerp(transform.localScale, Vector3.zero, Time.deltaTime * 5f);
@@ -194,6 +215,9 @@ public class Fellow : MonoBehaviour, FellowInterface
 
         // Return music back to full volume
         game.SetVolumeOfMusic(1f);
+
+        // Reenable collision with ghost
+        Physics.IgnoreCollision(GetComponent<SphereCollider>(), ghostCollider, false);
 
         yield break;
     }

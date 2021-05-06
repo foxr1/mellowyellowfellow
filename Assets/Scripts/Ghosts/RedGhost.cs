@@ -5,8 +5,12 @@ using UnityEngine.AI;
 
 public class RedGhost : MonoBehaviour, GhostInterface
 {
+    // Ghost properties
     public NavMeshAgent agent;
+    public Vector3 startPos;
+    private float startSpeed;
 
+    // Player
     FellowInterface player;
 
     // Materials
@@ -16,18 +20,17 @@ public class RedGhost : MonoBehaviour, GhostInterface
     Material deadMaterial;
     Material normalMaterial;
 
+    // Booleans
     bool hiding = false;
     bool respawned = false; // For when the ghost returns back to ghost house so game knows not to keep ghost in powered state after returning
     public bool hasDied = false; // For when the ghost has been killed by the player when powerup is active
 
-    [SerializeField]
-    GameObject ghostHouse;
-
-    public Vector3 startPos;
-
+    // Game properties
     [SerializeField]
     YellowFellowGame game;
     float scatterTime, chaseTime;
+    [SerializeField]
+    GameObject ghostHouse;
 
     // Start is called before the first frame update
     void Start()
@@ -35,6 +38,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
         normalMaterial = GetComponent<Renderer>().material;
         player = GameObject.Find("Fellow").GetComponent<FellowInterface>();
         agent = GetComponent<NavMeshAgent>();
+        startSpeed = agent.speed;
     }
 
     // Update is called once per frame
@@ -46,6 +50,8 @@ public class RedGhost : MonoBehaviour, GhostInterface
 
         if (game.InGame())
         {
+            agent.speed = startSpeed;
+
             if (hasDied)
             {
                 agent.destination = ghostHouse.transform.position;
@@ -53,7 +59,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
             else if (player.PowerupActive() && !hasDied && !respawned)
             {
                 Debug.Log("Hiding from player");
-                if (!hiding || agent.remainingDistance < 0.5f)
+                if (!hiding)
                 {
                     hiding = true;
                     agent.destination = PickHidingPlace();
@@ -97,10 +103,19 @@ public class RedGhost : MonoBehaviour, GhostInterface
             }
 
             // Increase speed by 5% depending on pellets eaten is 1/3 or 2/3 of the total for the given maze.
-            if (player.PelletsEaten() >= (game.GetCurrentTotalPellets() / 3) || player.PelletsEaten() >= (game.GetCurrentTotalPellets() * 2 / 3))
+            // Extra condition to check if speed has already been incremented to stop speed increasing indefinitely
+            if (agent.speed != startSpeed * 1.05f && player.PelletsEaten() == (game.GetCurrentTotalPellets() / 3))
             {
-                agent.speed = agent.speed * 1.05f;
+                agent.speed = startSpeed * 1.05f;
+            } 
+            else if (agent.speed != startSpeed * 1.1025f && player.PelletsEaten() == (game.GetCurrentTotalPellets() * 2 / 3))
+            {
+                agent.speed = startSpeed * 1.1025f;
             }
+        }
+        else
+        {
+            agent.speed = 0f;
         }
     }
 
@@ -148,6 +163,10 @@ public class RedGhost : MonoBehaviour, GhostInterface
         GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/LeftTeleporter");
         GameObject currentRightTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/RightTeleporter");
 
+        // Declare extra teleporters for third maze
+        GameObject topLeftTeleporter = GameObject.Find("Maze3/TopLeftTeleporter");
+        GameObject topRightTeleporter = GameObject.Find("Maze3/TopRightTeleporter");
+
         if (hasDied && other.gameObject.CompareTag("GhostHouse"))
         {
             hasDied = false;
@@ -160,7 +179,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
-            // Disable collisions for all types of fellow
+            // Enable collisions for all types of fellow
             GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
             foreach (GameObject fellow in fellows)
             {
@@ -180,6 +199,25 @@ public class RedGhost : MonoBehaviour, GhostInterface
             Vector3 leftPortalPos = currentLeftTeleporter.transform.position;
             transform.position = new Vector3(leftPortalPos.x + 2, 0.65f, leftPortalPos.z);
             agent.enabled = true;
+        }
+        else if (other.gameObject == topLeftTeleporter)
+        {
+            Vector3 rightPortalPos = topRightTeleporter.transform.position;
+            transform.position = new Vector3(rightPortalPos.x - 2f, 0.65f, rightPortalPos.z);
+        }
+        else if (other.gameObject == topRightTeleporter)
+        {
+            Vector3 leftPortalPos = topLeftTeleporter.transform.position;
+            transform.position = new Vector3(leftPortalPos.x + 2f, 0.65f, leftPortalPos.z);
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.tag == "Ghost")
+        {
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), collision.collider, true);
+            Physics.IgnoreLayerCollision(8, 8);
         }
     }
 

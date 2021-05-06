@@ -40,9 +40,17 @@ public class HighScoreTable : MonoBehaviour
 
     void CreateHighScoreText()
     {
-        // Changed to end loop at 10 to remove overflowing out of UI when loading high scores
-        for (int i = 0; i < 10; ++i) 
+        
+        for (int i = 0; i < allScores.Count; ++i) 
         {
+            // Changed to end loop at 10 to remove overflowing out of UI when loading high scores
+            // Used a break statement instead of changing end parameter to factor for if there are 
+            // less than 10 entries in the .txt and throwing an error.
+            if (i == 10)
+            {
+                break;
+            }
+
             GameObject o = new GameObject();
             o.transform.parent = transform;
 

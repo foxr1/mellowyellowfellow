@@ -10,6 +10,7 @@ public class CameraMovement : MonoBehaviour
     private float speed = 1f;
     private Vector3 startPos, startUIPos, nextLevelPos, levelUIPos;
     private GameObject userInterface;
+    private bool inMinigame = false;
 
     private void Start()
     {
@@ -21,7 +22,10 @@ public class CameraMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(90, 0, 0), Time.deltaTime * speed);
+        if (!inMinigame)
+        {
+            transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(90, 0, 0), Time.deltaTime * speed);
+        }
     }
 
     public IEnumerator MoveCameraToLevel(int currentLevel, int nextLevel)
@@ -49,20 +53,26 @@ public class CameraMovement : MonoBehaviour
 
     public IEnumerator AttachCameraToFellow()
     {
-        Vector3 fpFellowPos = GameObject.Find("FPFellow").transform.position;
-        GameObject canvas = GameObject.Find("FPUI");
+        GameObject fpFellow = GameObject.Find("FPFellow");
+        Vector3 fpFellowPos = fpFellow.transform.position;
+        GameObject fpUI = GameObject.Find("FPUI");
+        GameObject countdownUI = GameObject.Find("CountdownUI");
+        inMinigame = true;
 
         while (true)
         {
-            fpFellowPos = GameObject.Find("FPFellow").transform.position;
+            fpFellowPos = fpFellow.transform.position;
             Vector3 cameraPos = new Vector3(fpFellowPos.x, 0.4f, fpFellowPos.z);
 
             // Update camera position to be fixed to player
             transform.position = cameraPos;
 
             // Keep first person UI in front of camera
-            canvas.transform.position = transform.position + transform.forward * 0.45f;
-            canvas.transform.rotation = new Quaternion(0.0f, transform.rotation.y, 0.0f, transform.rotation.w);
+            fpUI.transform.position = transform.position + transform.forward * 0.40f;
+            fpUI.transform.rotation = new Quaternion(0.0f, transform.rotation.y, 0.0f, transform.rotation.w);
+
+            countdownUI.transform.position = transform.position + transform.forward * 0.40f;
+            countdownUI.transform.rotation = new Quaternion(0.0f, transform.rotation.y, 0.0f, transform.rotation.w);
 
             yield return new WaitForEndOfFrame();
         }

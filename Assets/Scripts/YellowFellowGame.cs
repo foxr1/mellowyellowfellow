@@ -39,7 +39,7 @@ public class YellowFellowGame : MonoBehaviour
 
     // Pellets
     [SerializeField]
-    private GameObject[] pelletsL1, pelletsL2, pelletsL3;
+    private GameObject[] pelletsL1, pelletsL2, pelletsL3, pelletsFP;
     public GameObject[] pellets;
     private List<GameObject[]> allPellets = new List<GameObject[]>();
 
@@ -54,7 +54,8 @@ public class YellowFellowGame : MonoBehaviour
     private int stage = 1; // Determines which stage of mode the game should be in
 
     // Music
-    AudioSource menuMusic, inGameMusic;
+    AudioSource[] audioClips;
+    AudioSource menuMusic;
 
     // Camera
     [SerializeField]
@@ -63,6 +64,7 @@ public class YellowFellowGame : MonoBehaviour
     enum GameMode
     {
         InGame,
+        InMinigame,
         MainMenu,
         HighScores,
         Paused
@@ -73,9 +75,8 @@ public class YellowFellowGame : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        AudioSource[] audio = GetComponents<AudioSource>();
-        menuMusic = audio[0];
-        inGameMusic = audio[1];
+        audioClips = GetComponents<AudioSource>();
+        menuMusic = audioClips[0];
 
         menuMusic.Play(0);
 
@@ -83,9 +84,11 @@ public class YellowFellowGame : MonoBehaviour
         pelletsL1 = GameObject.FindGameObjectsWithTag("L1Pellet");
         pelletsL2 = GameObject.FindGameObjectsWithTag("L2Pellet");
         pelletsL3 = GameObject.FindGameObjectsWithTag("L3Pellet");
+        pelletsFP = GameObject.FindGameObjectsWithTag("L0Pellet");
         allPellets.Add(pelletsL1);
         allPellets.Add(pelletsL2);
         allPellets.Add(pelletsL3);
+        allPellets.Add(pelletsFP);
 
         // When game starts the user will play from level 1, so set pellets to first maze pellets
         // and set level to 1.
@@ -107,17 +110,18 @@ public class YellowFellowGame : MonoBehaviour
             case GameMode.Paused:       UpdatePauseMenu(); break;
         }
 
-        if (player.PelletsEaten() == pellets.Length)
+        if (player.PelletsEaten() == pellets.Length || minigamePlayer.PelletsEaten() == pellets.Length)
         {
+            gameMode = GameMode.Paused;
             winUI.gameObject.SetActive(true);
         }
 
-        if (gameMode == GameMode.InGame)
+        if (InGame())
         {
             // Global timers for scatter and chase mode
             scatterTime = Mathf.Max(0.0f, scatterTime - Time.deltaTime); // 7 seconds of scatter mode based on documentation given on ghost behaviour
 
-            if (gameMode == GameMode.InGame && scatterTime <= 0.0f)
+            if (scatterTime <= 0.0f)
             {
                 if (stage < 4)
                 {
@@ -215,7 +219,7 @@ public class YellowFellowGame : MonoBehaviour
     {
         gameMode                = GameMode.Paused;
         pauseUI.gameObject.SetActive(true);
-        GameObject pausedText = GameObject.Find("PauseUI/PausedText");
+        GameObject pausedText = GameObject.Find("User Interface/PauseUI/PausedText");
         Time.timeScale = 0;
         while (true)
         {
@@ -250,11 +254,31 @@ public class YellowFellowGame : MonoBehaviour
 
         // Start countdown UI
         countdownUI.gameObject.SetActive(true);
-        StartCoroutine(StartCountdown());
+        StartCoroutine(StartCountdown(GameMode.InGame));
     }
 
-    private IEnumerator StartCountdown()
+    private IEnumerator StartCountdown(GameMode mode)
     {
+        // If player is not on the first level, wait before countdown to allow time for
+        // camera to pan over to next level
+        if (level != 1)
+        {
+            yield return new WaitForSeconds(1.2f);
+        }
+
+        GameObject countdownPanel = GameObject.Find("CountdownPanel");
+        if (mode == GameMode.InGame)
+        {
+            countdownUI.transform.localScale = Vector3.one * 0.1f; // Set size to fit maze
+            countdownPanel.SetActive(true);
+        } 
+        else if (mode == GameMode.InMinigame)
+        {
+            countdownUI.transform.localScale = Vector3.one * 0.005f; // Set size to fit infront of player
+            countdownPanel.SetActive(false); // Disable panel from countdown UI for first person view
+        }
+        
+
         UIFader[] uiFaders = countdownUI.GetComponents<UIFader>();
         UIFader number = uiFaders[0];
         UIFader background = uiFaders[1];
@@ -300,15 +324,20 @@ public class YellowFellowGame : MonoBehaviour
         }
 
         // Start the game mechanics
-        inGameMusic.Play(0);
-        gameMode = GameMode.InGame;
+        audioClips[maze].Play(0);
+        gameMode = mode;
 
         countdownUI.gameObject.SetActive(false);
     }
 
     public bool InGame()
     {
-        return gameMode == GameMode.InGame;
+        return gameMode == GameMode.InGame || gameMode == GameMode.InMinigame;
+    }
+
+    public bool InMinigame()
+    {
+        return gameMode == GameMode.InMinigame;
     }
 
     public int CurrentLevel()
@@ -323,25 +352,28 @@ public class YellowFellowGame : MonoBehaviour
 
     public void NextLevel()
     {
-        inGameMusic.Stop();
+        audioClips[maze].Stop();
 
         winUI.gameObject.SetActive(false);
         gameMode = GameMode.Paused;
 
         // Reset fellow properties
-        player.lives = 3;
+        if (player.lives < 3) // Give player an extra life between levels as long as it's less than 3
+        {
+            player.lives++; 
+        }
         player.pelletsEaten = 0;
         player.powerupTime = 0;
         player.GetComponent<Rigidbody>().velocity = Vector3.zero;
 
         // Show lives UI
         Vector3 lifeSize = new Vector3(1.87622f, 1.87622f, 0.1f);
-        for (int i = 0; i <=2; i++)
+        for (int i = 0; i <= player.lives - 1; i++)
         {
             livesUI.transform.GetChild(i).localScale = lifeSize;
         }
 
-        // Next level, unless reached last level
+        // Next level, unless reached last level, then return to first maze
         int previousMaze = maze; // Set previous level before increment for camera movement
         if ((maze % 3) == 0)
         {
@@ -378,13 +410,13 @@ public class YellowFellowGame : MonoBehaviour
         foreach (GameObject ghost in ghosts)
         {
             GhostInterface ghostInterface = ghost.GetComponent<GhostInterface>();
-            // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
-            ghostInterface.SetNavMeshAgent(false);
+            ghostInterface.SetNavMeshAgent(false); // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
             Vector3 ghostStartPos = ghost.GetComponent<GhostInterface>().GetStartPos();
             Vector3 newGhostStartPos = new Vector3(ghostStartPos.x + ((maze - previousMaze) * 31.0f), ghostStartPos.y, ghostStartPos.z);
             ghostInterface.SetStartPos(newGhostStartPos);
             ghostInterface.ResetGhost();
             ghostInterface.SetPlayerTarget(player.GetComponent<FellowInterface>());
+            ghostInterface.SetSpeed(3.5f);
             ghostInterface.SetNavMeshAgent(true);
         }
 
@@ -412,7 +444,13 @@ public class YellowFellowGame : MonoBehaviour
 
     public void StartFPMinigame()
     {
+        menuMusic.Stop();
+
         StartCoroutine(cameraObject.GetComponent<CameraMovement>().AttachCameraToFellow());
+
+        // Set pellets to first person maze
+        pellets = allPellets[3];
+        maze = 0;
 
         // Change ghosts position to minigame maze
         GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
@@ -433,7 +471,10 @@ public class YellowFellowGame : MonoBehaviour
 
         gameUI.gameObject.SetActive(true);
         cameraObject.GetComponent<MouseLook>().enabled = true;
-        gameMode = GameMode.InGame;
+
+        // Start countdown UI
+        countdownUI.gameObject.SetActive(true);
+        StartCoroutine(StartCountdown(GameMode.InMinigame));
     }
 
     public int GetCurrentTotalPellets()
@@ -443,6 +484,6 @@ public class YellowFellowGame : MonoBehaviour
 
     public void SetVolumeOfMusic(float volume)
     {
-        inGameMusic.volume = volume;
+        audioClips[maze].volume = volume;
     }
 }

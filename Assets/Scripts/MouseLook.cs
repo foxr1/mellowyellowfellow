@@ -6,13 +6,14 @@ public class MouseLook : MonoBehaviour
 {
     public float mouseSensitivity = 150f;
     public Transform playerBody;
-    private float xRotation = 90;
+    private float xRotation = 0;
     private float yRotation = 0;
 
     // Start is called before the first frame update
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked; // Lock cursor to center of screen.
+        transform.localRotation = Quaternion.Euler(0, 0, 0);
     }
 
     // Update is called once per frame

@@ -7,7 +7,7 @@ public class FPFellow : MonoBehaviour, FellowInterface
 {
     // Game
     [SerializeField]
-    GameObject game;
+    YellowFellowGame game;
 
     // Character Movement
     [SerializeField]
@@ -20,6 +20,11 @@ public class FPFellow : MonoBehaviour, FellowInterface
     int pointsPerPellet = 100;
     [SerializeField]
     GameObject scoreText;
+
+    // Pellets Remaining
+    [SerializeField]
+    GameObject pelletsRemainingText;
+    int pelletsRemaining = 120;
 
     // Powerup
     [SerializeField]
@@ -35,41 +40,76 @@ public class FPFellow : MonoBehaviour, FellowInterface
     public Vector3 startPos;
     public string direction;
 
+    // Character Controller movement
     [SerializeField]
     CharacterController controller;
     Vector3 movement;
+
+    // Sounds
+    [SerializeField]
+    AudioSource deathSound;
 
     // Start is called before the first frame update
     void Start()
     {
         // Get start position of player to reset to when player dies
-        startPos = gameObject.transform.position;
+        startPos = transform.position;
         Physics.IgnoreCollision(GetComponent<SphereCollider>(), GameObject.Find("GhostHouse").GetComponent<BoxCollider>(), false);
+        pelletsRemainingText.GetComponent<Text>().text = pelletsRemaining.ToString();
     }
 
     // Update is called once per frame
     void Update()
     {
-        powerupTime = Mathf.Max(0.0f, powerupTime - Time.deltaTime);
+        if (game.InMinigame())
+        {
+            pelletsRemaining = game.GetCurrentTotalPellets() - pelletsEaten;
 
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+            powerupTime = Mathf.Max(0.0f, powerupTime - Time.deltaTime);
 
-        movement = transform.right * x + transform.forward * z;
+            float x = Input.GetAxis("Horizontal");
+            float z = Input.GetAxis("Vertical");
 
-        controller.Move(movement * speed * Time.deltaTime);
+            movement = transform.right * x + transform.forward * z;
+
+            controller.Move(movement * speed * Time.deltaTime);
+
+            // Get rotation of player to determine which direction they're facing
+            float dirFacing = transform.localRotation.eulerAngles.y;
+            if (dirFacing <= 360 && dirFacing > 315 || dirFacing >= 0 && dirFacing <= 45)
+            {
+                direction = "up";
+            }
+            else if (dirFacing > 45 && dirFacing <= 135)
+            {
+                direction = "right";
+            }
+            else if (dirFacing > 135 && dirFacing <= 225)
+            {
+                direction = "down";
+            }
+            else if (dirFacing > 225 && dirFacing <= 315)
+            {
+                direction = "left";
+            }
+        } else
+        {
+            movement = Vector3.zero;
+            controller.Move(movement * speed * Time.deltaTime);
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/LeftTeleporter");
-        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.GetComponent<YellowFellowGame>().CurrentLevel().ToString() + "/RightTeleporter");
+        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "/LeftTeleporter");
+        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "/RightTeleporter");
 
-        if (other.gameObject.CompareTag("L1Pellet") || other.gameObject.CompareTag("L2Pellet"))
+        if (other.gameObject.CompareTag("L" + game.CurrentMaze().ToString() + "Pellet"))
         {
             pelletsEaten++;
             score += pointsPerPellet;
             scoreText.GetComponent<Text>().text = score.ToString();
+            pelletsRemainingText.GetComponent<Text>().text = pelletsRemaining.ToString();
         }
         else if (other.gameObject.CompareTag("Powerup"))
         {
@@ -111,30 +151,57 @@ public class FPFellow : MonoBehaviour, FellowInterface
             }
             else
             {
-                lives--;
-                if (lives <= 0)
-                {
-                    Debug.Log("You Died");
-                    gameObject.SetActive(false);
-                }
-                else
-                {
-                    // Reset fellow back to start position
-                    transform.position = startPos;
+                // Disable collisions to stop accidental triggers while death is occuring
+                Physics.IgnoreCollision(GetComponent<SphereCollider>(), collision.collider, true);
 
-                    // Reset all ghosts back to original positions
-                    GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
-                    foreach (GameObject ghost in ghosts)
-                    {
-                        ghost.GetComponent<GhostInterface>().ResetGhost();
-                        game.GetComponent<YellowFellowGame>().scatterTime = 7.0f; // Reset scatter time for ghosts
-                        game.GetComponent<YellowFellowGame>().chaseTime = 20.0f; // Reset chase time for ghosts
-                    }
-                }
+                game.SetVolumeOfMusic(0.2f);
+                deathSound.Play(0);
+                StartCoroutine(FellowDeath(collision.collider));
 
-                // Remove hearts from UI each time player dies
+                // Remove life from hearts
                 livesUI.transform.GetChild(lives).localScale = Vector3.zero;
             }
+        }
+    }
+
+    public IEnumerator FellowDeath(Collider ghostCollider)
+    {
+        lives--;
+        gameObject.SetActive(false);
+        if (lives <= 0)
+        {
+            Debug.Log("You Died");
+            yield break;
+        }
+        else
+        {
+            // Stop ghost movements
+            GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
+            foreach (GameObject ghost in ghosts)
+            {
+                ghost.GetComponent<GhostInterface>().SetSpeed(0f);
+            }
+
+            // Reset fellow back to start position
+            transform.position = startPos;
+
+            // Reset all ghosts back to original positions
+            foreach (GameObject ghost in ghosts)
+            {
+                ghost.GetComponent<GhostInterface>().ResetGhost();
+                game.scatterTime = 7.0f; // Reset scatter time for ghosts
+                game.chaseTime = 20.0f; // Reset chase time for ghosts
+                ghost.GetComponent<GhostInterface>().SetSpeed(3.5f);
+            }
+
+            // Return music back to full volume
+            game.SetVolumeOfMusic(1f);
+            gameObject.SetActive(true);
+
+            // Reenable collision with ghost
+            Physics.IgnoreCollision(GetComponent<SphereCollider>(), ghostCollider, false);
+
+            yield break;
         }
     }
 

@@ -10,6 +10,11 @@ public class BlueGhost : MonoBehaviour, GhostInterface
     public Vector3 startPos;
     private float startSpeed;
 
+    // Scatter goal positions
+    [SerializeField]
+    Transform[] scatterPoints;
+    private int destPoint = -1; // Will increment to 0 on start
+
     // Player
     FellowInterface player;
 
@@ -89,11 +94,13 @@ public class BlueGhost : MonoBehaviour, GhostInterface
 
                     if (scatterTime > 0.0f)
                     {
-                        if (agent.remainingDistance < 0.5)
+                        // If ghost is currently moving towards a point
+                        if (!agent.pathPending && agent.remainingDistance < 0.3f)
                         {
-                            agent.destination = PickRandomPosition();
-                            hiding = false;
+                            destPoint = (destPoint + 1) % scatterPoints.Length;
+                            agent.destination = scatterPoints[destPoint].position;
                             GetComponent<Renderer>().material = normalMaterial;
+                            hiding = false;
                         }
                     }
                     else

@@ -10,6 +10,11 @@ public class RedGhost : MonoBehaviour, GhostInterface
     public Vector3 startPos;
     private float startSpeed;
 
+    // Scatter goal positions
+    [SerializeField]
+    Transform[] scatterPoints;
+    private int destPoint = -1; // Will increment to 0 on start
+
     // Player
     FellowInterface player;
 
@@ -73,30 +78,30 @@ public class RedGhost : MonoBehaviour, GhostInterface
             }
             else
             {
-                Debug.Log("Chasing Player!");
                 if (hiding)
                 {
                     GetComponent<Renderer>().material = normalMaterial;
                     hiding = false;
                 }
 
+                // If in scatter mode
                 if (scatterTime > 0.0f)
                 {
                     Debug.Log("scatter");
-                    if (agent.remainingDistance < 0.5)
+                    // If ghost is currently moving towards a point
+                    if (!agent.pathPending && agent.remainingDistance < 0.3f)
                     {
-                        agent.destination = PickRandomPosition();
-                        hiding = false;
+                        destPoint = (destPoint + 1) % scatterPoints.Length;
+                        agent.destination = scatterPoints[destPoint].position;
                         GetComponent<Renderer>().material = normalMaterial;
+                        hiding = false;
                     }
                 }
-                else
+                // If in chase mode
+                else if (chaseTime > 0.0f)
                 {
                     Debug.Log("chase");
-                    if (chaseTime > 0.0f)
-                    {
-                        agent.destination = player.GetPosition();
-                    }
+                    agent.destination = player.GetPosition();
                 }
 
                 hasDied = false;
@@ -209,15 +214,6 @@ public class RedGhost : MonoBehaviour, GhostInterface
         {
             Vector3 leftPortalPos = topLeftTeleporter.transform.position;
             transform.position = new Vector3(leftPortalPos.x + 2f, 0.65f, leftPortalPos.z);
-        }
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.tag == "Ghost")
-        {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), collision.collider, true);
-            Physics.IgnoreLayerCollision(8, 8);
         }
     }
 

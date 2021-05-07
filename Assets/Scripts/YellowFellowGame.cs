@@ -59,7 +59,12 @@ public class YellowFellowGame : MonoBehaviour
 
     // Camera
     [SerializeField]
-    GameObject cameraObject;
+    CameraMovement cameraMovement;
+    [SerializeField]
+    MouseLook mouseLook;
+
+    // Ghosts
+    GameObject[] ghosts;
 
     enum GameMode
     {
@@ -89,6 +94,9 @@ public class YellowFellowGame : MonoBehaviour
         allPellets.Add(pelletsL2);
         allPellets.Add(pelletsL3);
         allPellets.Add(pelletsFP);
+
+        // Define all ghost characters
+        ghosts = GameObject.FindGameObjectsWithTag("Ghost");
 
         // When game starts the user will play from level 1, so set pellets to first maze pellets
         // and set level to 1.
@@ -156,11 +164,7 @@ public class YellowFellowGame : MonoBehaviour
     {
         if (!gameUI.gameObject.activeSelf)
         {
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                StartGame();
-            }
-            else if (Input.GetKeyDown(KeyCode.Return))
+            if (Input.GetKeyDown(KeyCode.Return))
             {
                 StartHighScores();
             }
@@ -257,6 +261,40 @@ public class YellowFellowGame : MonoBehaviour
         StartCoroutine(StartCountdown(GameMode.InGame));
     }
 
+    public void StartFPMinigame()
+    {
+        menuMusic.Stop();
+
+        StartCoroutine(cameraMovement.AttachCameraToFellow());
+
+        // Set pellets to first person maze
+        pellets = allPellets[3];
+        maze = 0;
+
+        // Change ghosts position to minigame maze
+        foreach (GameObject ghost in ghosts)
+        {
+            GhostInterface ghostInterface = ghost.GetComponent<GhostInterface>();
+            // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
+            ghostInterface.SetNavMeshAgent(false);
+            Vector3 ghostStartPos = ghost.GetComponent<GhostInterface>().GetStartPos();
+            Vector3 newGhostStartPos = new Vector3(ghostStartPos.x - 31.0f, ghostStartPos.y, ghostStartPos.z);
+            ghostInterface.SetStartPos(newGhostStartPos);
+            ghostInterface.ResetGhost();
+            ghostInterface.SetPlayerTarget(minigamePlayer.GetComponent<FellowInterface>());
+            ghostInterface.SetSpeed(1.5f);
+            ghostInterface.SetNavMeshAgent(true);
+
+        }
+
+        gameUI.gameObject.SetActive(true);
+        mouseLook.enabled = true;
+
+        // Start countdown UI
+        countdownUI.gameObject.SetActive(true);
+        StartCoroutine(StartCountdown(GameMode.InMinigame));
+    }
+
     private IEnumerator StartCountdown(GameMode mode)
     {
         // If player is not on the first level, wait before countdown to allow time for
@@ -330,26 +368,6 @@ public class YellowFellowGame : MonoBehaviour
         countdownUI.gameObject.SetActive(false);
     }
 
-    public bool InGame()
-    {
-        return gameMode == GameMode.InGame || gameMode == GameMode.InMinigame;
-    }
-
-    public bool InMinigame()
-    {
-        return gameMode == GameMode.InMinigame;
-    }
-
-    public int CurrentLevel()
-    {
-        return level;
-    }
-
-    public int CurrentMaze()
-    {
-        return maze;
-    }
-
     public void NextLevel()
     {
         audioClips[maze].Stop();
@@ -360,7 +378,7 @@ public class YellowFellowGame : MonoBehaviour
         // Reset fellow properties
         if (player.lives < 3) // Give player an extra life between levels as long as it's less than 3
         {
-            player.lives++; 
+            player.lives++;
         }
         player.pelletsEaten = 0;
         player.powerupTime = 0;
@@ -397,30 +415,96 @@ public class YellowFellowGame : MonoBehaviour
         chaseTime = 20.0f;
 
         // Move camera to next level
-        StartCoroutine(cameraObject.GetComponent<CameraMovement>().MoveCameraToLevel(previousMaze, maze));
+        StartCoroutine(cameraMovement.MoveCameraToLevel(previousMaze, maze));
 
+        ResetCharacters(maze, previousMaze);
+
+        StartGame();
+    }
+
+    public void ExitGame()
+    {
+        audioClips[maze].Stop();
+
+        Time.timeScale = 1;
+
+        // Reset fellow properties
+        player.lives = 3;
+        player.pelletsEaten = 0;
+        player.powerupTime = 0;
+        player.SetScore(0);
+        player.GetComponent<Rigidbody>().velocity = Vector3.zero;
+
+        // Show lives UI
+        Vector3 lifeSize = new Vector3(1.87622f, 1.87622f, 0.1f);
+        for (int i = 0; i <= player.lives - 1; i++)
+        {
+            livesUI.transform.GetChild(i).localScale = lifeSize;
+        }
+
+        ResetCharacters(1, maze);
+
+        // If player is not on the first maze then move camera back
+        if (maze != 1)
+        {
+            cameraMovement.ReturnToStart();
+        }
+
+        level = 1;
+        maze = 1;
+
+        pauseUI.SetActive(false);
+        gameUI.SetActive(false);
+        mainMenuUI.SetActive(true);
+        GetComponent<UIFader>().FadeIn(2f);
+
+        menuMusic.Play(0);
+
+        gameMode = GameMode.MainMenu;
+    }
+
+    private void ResetCharacters(int nextMaze, int previousMaze)
+    {
         // Move fellow and to next maze and change start position
         Vector3 startPos = player.GetComponent<Fellow>().GetStartPos();
-        Vector3 newStartPos = new Vector3(startPos.x + ((maze - previousMaze) * 31.0f), startPos.y, startPos.z);
+        Vector3 newStartPos = new Vector3(startPos.x + ((nextMaze - previousMaze) * 31.0f), startPos.y, startPos.z);
         player.SetStartPos(newStartPos);
         player.transform.position = newStartPos;
 
         // Reset ghosts position to next maze
-        GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
+
         foreach (GameObject ghost in ghosts)
         {
             GhostInterface ghostInterface = ghost.GetComponent<GhostInterface>();
             ghostInterface.SetNavMeshAgent(false); // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
             Vector3 ghostStartPos = ghost.GetComponent<GhostInterface>().GetStartPos();
-            Vector3 newGhostStartPos = new Vector3(ghostStartPos.x + ((maze - previousMaze) * 31.0f), ghostStartPos.y, ghostStartPos.z);
+            Vector3 newGhostStartPos = new Vector3(ghostStartPos.x + ((nextMaze - previousMaze) * 31.0f), ghostStartPos.y, ghostStartPos.z);
             ghostInterface.SetStartPos(newGhostStartPos);
             ghostInterface.ResetGhost();
             ghostInterface.SetPlayerTarget(player.GetComponent<FellowInterface>());
             ghostInterface.SetSpeed(3.5f);
             ghostInterface.SetNavMeshAgent(true);
         }
+    }
 
-        StartGame();
+    public bool InGame()
+    {
+        return gameMode == GameMode.InGame || gameMode == GameMode.InMinigame;
+    }
+
+    public bool InMinigame()
+    {
+        return gameMode == GameMode.InMinigame;
+    }
+
+    public int CurrentLevel()
+    {
+        return level;
+    }
+
+    public int CurrentMaze()
+    {
+        return maze;
     }
 
     public void ShowSaveUI()
@@ -439,42 +523,7 @@ public class YellowFellowGame : MonoBehaviour
         saveUI.gameObject.SetActive(false);
         mainMenuUI.gameObject.SetActive(true);
 
-        cameraObject.GetComponent<CameraMovement>().ReturnToStart();
-    }
-
-    public void StartFPMinigame()
-    {
-        menuMusic.Stop();
-
-        StartCoroutine(cameraObject.GetComponent<CameraMovement>().AttachCameraToFellow());
-
-        // Set pellets to first person maze
-        pellets = allPellets[3];
-        maze = 0;
-
-        // Change ghosts position to minigame maze
-        GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
-        foreach (GameObject ghost in ghosts)
-        {
-            GhostInterface ghostInterface = ghost.GetComponent<GhostInterface>();
-            // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
-            ghostInterface.SetNavMeshAgent(false);
-            Vector3 ghostStartPos = ghost.GetComponent<GhostInterface>().GetStartPos();
-            Vector3 newGhostStartPos = new Vector3(ghostStartPos.x - 31.0f, ghostStartPos.y, ghostStartPos.z);
-            ghostInterface.SetStartPos(newGhostStartPos);
-            ghostInterface.ResetGhost();
-            ghostInterface.SetPlayerTarget(minigamePlayer.GetComponent<FellowInterface>());
-            ghostInterface.SetSpeed(1.5f);
-            ghostInterface.SetNavMeshAgent(true);
-
-        }
-
-        gameUI.gameObject.SetActive(true);
-        cameraObject.GetComponent<MouseLook>().enabled = true;
-
-        // Start countdown UI
-        countdownUI.gameObject.SetActive(true);
-        StartCoroutine(StartCountdown(GameMode.InMinigame));
+        cameraMovement.ReturnToStart();
     }
 
     public int GetCurrentTotalPellets()

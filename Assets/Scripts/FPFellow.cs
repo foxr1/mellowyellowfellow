@@ -41,7 +41,6 @@ public class FPFellow : MonoBehaviour, FellowInterface
     public string direction;
 
     // Character Controller movement
-    [SerializeField]
     CharacterController controller;
     Vector3 movement;
 
@@ -54,6 +53,8 @@ public class FPFellow : MonoBehaviour, FellowInterface
     {
         // Get start position of player to reset to when player dies
         startPos = transform.position;
+        controller = GetComponent<CharacterController>();
+        controller.enabled = false; // Disable to avoid unintended movement before playing game
         Physics.IgnoreCollision(GetComponent<SphereCollider>(), GameObject.Find("GhostHouse").GetComponent<BoxCollider>(), false);
         pelletsRemainingText.GetComponent<Text>().text = pelletsRemaining.ToString();
     }
@@ -63,6 +64,7 @@ public class FPFellow : MonoBehaviour, FellowInterface
     {
         if (game.InMinigame())
         {
+            controller.enabled = true;
             pelletsRemaining = game.GetCurrentTotalPellets() - pelletsEaten;
 
             powerupTime = Mathf.Max(0.0f, powerupTime - Time.deltaTime);
@@ -92,10 +94,10 @@ public class FPFellow : MonoBehaviour, FellowInterface
             {
                 direction = "left";
             }
-        } else
+        }
+        else
         {
-            movement = Vector3.zero;
-            controller.Move(movement * speed * Time.deltaTime);
+            controller.enabled = false;
         }
     }
 

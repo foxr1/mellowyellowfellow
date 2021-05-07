@@ -242,6 +242,11 @@ public class Fellow : MonoBehaviour, FellowInterface
         return score;
     }
 
+    public void SetScore(int newScore)
+    {
+        score = newScore;
+    }
+
     public Vector3 GetPosition()
     {
         return transform.position;

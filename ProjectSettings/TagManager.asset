@@ -17,6 +17,7 @@ TagManager:
   - L3Pellet
   - UI
   - L0Pellet
+  - Minimap
   layers:
   - Default
   - TransparentFX

@@ -45,6 +45,7 @@ public class BlueGhost : MonoBehaviour, GhostInterface
         player = GameObject.Find("Fellow").GetComponent<FellowInterface>();
         agent = GetComponent<NavMeshAgent>();
         startSpeed = agent.speed;
+        SetScatterPoints(1);
     }
 
     // Update is called once per frame
@@ -239,7 +240,17 @@ public class BlueGhost : MonoBehaviour, GhostInterface
         }
     }
 
-    void GhostInterface.died()
+    public void SetScatterPoints(int maze)
+    {
+        int amountOfPoints = GameObject.Find("Maze" + maze + "/ScatterPathPoints/Blue").transform.childCount;
+        scatterPoints = new Transform[amountOfPoints];
+        for (int i = 0; i < amountOfPoints; i++)
+        {
+            scatterPoints.SetValue(GameObject.Find("Maze" + maze + "/ScatterPathPoints/Blue").transform.GetChild(i), i);
+        }
+    }
+
+    public void GhostDied()
     {
         hasDied = true;
         GetComponent<Renderer>().material = deadMaterial; // Transparent material

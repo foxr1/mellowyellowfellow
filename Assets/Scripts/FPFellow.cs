@@ -148,7 +148,7 @@ public class FPFellow : MonoBehaviour, FellowInterface
         {
             if (PowerupActive() && !collision.gameObject.GetComponent<GhostInterface>().HasRespawned())
             {
-                collision.gameObject.GetComponent<GhostInterface>().died();
+                collision.gameObject.GetComponent<GhostInterface>().GhostDied();
                 score += 200;
             }
             else

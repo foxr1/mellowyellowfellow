@@ -283,6 +283,7 @@ public class YellowFellowGame : MonoBehaviour
             ghostInterface.ResetGhost();
             ghostInterface.SetPlayerTarget(minigamePlayer.GetComponent<FellowInterface>());
             ghostInterface.SetSpeed(1.5f);
+            ghostInterface.SetScatterPoints(maze);
             ghostInterface.SetNavMeshAgent(true);
 
         }
@@ -483,6 +484,7 @@ public class YellowFellowGame : MonoBehaviour
             ghostInterface.ResetGhost();
             ghostInterface.SetPlayerTarget(player.GetComponent<FellowInterface>());
             ghostInterface.SetSpeed(3.5f);
+            ghostInterface.SetScatterPoints(nextMaze);
             ghostInterface.SetNavMeshAgent(true);
         }
     }

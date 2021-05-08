@@ -4,7 +4,7 @@ using UnityEngine;
 
 public interface GhostInterface
 {
-    void died();
+    void GhostDied();
     Vector3 GetStartPos();
     void SetStartPos(Vector3 startPos);
     void ResetGhost();
@@ -13,4 +13,5 @@ public interface GhostInterface
     void SetNavMeshAgent(bool enabled);
     void SetSpeed(float speed);
     void SetPlayerTarget(FellowInterface fellow);
+    void SetScatterPoints(int maze);
 }

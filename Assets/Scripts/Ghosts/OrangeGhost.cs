@@ -55,17 +55,14 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
         chaseTime = game.chaseTime;
 
         // Wait for 1/3 of pellets to be collected
-        if (player.PelletsEaten() >= (game.pellets.Length / 3))
-        {
-            canMove = true;
-        }
+        canMove = player.PelletsEaten() >= (game.pellets.Length / 3);
 
-        if (game.InGame())
+        if (game.InAnyGame() && agent.isActiveAndEnabled)
         {
-            agent.speed = startSpeed;
-
             if (canMove)
             {
+                agent.speed = startSpeed;
+
                 if (hasDied)
                 {
                     agent.destination = ghostHouse.transform.position;
@@ -108,20 +105,27 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
                         if (chaseTime > 0.0f)
                         {
                             // Orange ghost will only chase if it is further than "8 tiles" away from the player
-                            // When looking at the logged distance it very rarely will be a distance of 8 away,
+                            // When looking at the logged distance, it very rarely will be a distance of 8 away,
                             // so I lowered this number to factor for this.
 
                             Vector3 playerPos = player.GetPosition();
                             Vector3 ghostPos = this.transform.position;
                             float distanceAway = Vector3.Distance(playerPos, ghostPos);
 
+                            // If further than 5 chase, else return to scatter mode
                             if (distanceAway > 5)
                             {
                                 agent.destination = player.GetPosition();
                             }
                             else
                             {
-                                agent.destination = PickRandomPosition();
+                                if (!agent.pathPending && agent.remainingDistance < 0.3f)
+                                {
+                                    destPoint = (destPoint + 1) % scatterPoints.Length;
+                                    agent.destination = scatterPoints[destPoint].position;
+                                    GetComponent<Renderer>().material = normalMaterial;
+                                    hiding = false;
+                                }
                             }
                         }
                     }
@@ -129,61 +133,57 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
                     hasDied = false;
                 }
             }
+            else
+            {
+                agent.speed = 0f;
+            }
         }
-        else
-        {
-            agent.speed = 0f;
-        }
-    }
-
-    Vector3 PickRandomPosition()
-    {
-        Vector3 destination = transform.position;
-        Vector2 randomDirection = UnityEngine.Random.insideUnitCircle * 8.0f;
-        destination.x += randomDirection.x;
-        destination.z += randomDirection.y;
-
-        NavMeshHit navHit;
-        NavMesh.SamplePosition(destination, out navHit, 8.0f, NavMesh.AllAreas);
-
-        return navHit.position;
     }
 
     Vector3 PickHidingPlace()
     {
-        Vector3 directionToPlayer = (player.GetPosition() - transform.position).normalized;
+        bool isDirSafe = false;
+        float vRotation = 0;
+        Vector3 newPos = new Vector3();
 
-        NavMeshHit navHit;
-        NavMesh.SamplePosition(transform.position - (directionToPlayer * 8.0f), out navHit, 8.0f, NavMesh.AllAreas);
-
-        return navHit.position;
-    }
-
-    bool CanSeePlayer()
-    {
-        Vector3 rayPos = transform.position;
-        Vector3 rayDir = (player.GetPosition() - rayPos).normalized;
-
-        RaycastHit info;
-        if (Physics.Raycast(rayPos, rayDir, out info))
+        while (!isDirSafe)
         {
-            if (info.transform.CompareTag("Fellow"))
+            // Calculate the vector pointing from player to the ghost
+            Vector3 dirToPlayer = transform.position - player.GetPosition();
+
+            // Calculate the vector from the ghost to the direction away from the player the new point
+            newPos = transform.position + dirToPlayer;
+
+            // Rotate the direction of the ghost to move
+            newPos = Quaternion.Euler(0, vRotation, 0) * newPos;
+
+            // Shoot a Raycast out to the new direction and see if it hits an obstacle
+            bool isHit = Physics.Raycast(transform.position, newPos, out RaycastHit hit, 2f);
+
+            if (hit.transform == null)
             {
-                return true; // Ghost can see player.
+                // If the Raycast to the flee direction doesn't hit a wall then the Enemy is good to go to this direction
+                return newPos;
+            }
+
+            // Change the direction of fleeing is it hits a wall by 15 degrees
+            if (isHit && hit.transform.CompareTag("Wall"))
+            {
+                vRotation += 25;
+                isDirSafe = false;
+            }
+            else
+            {
+                // If the Raycast to the flee direction doesn't hit a wall then the Enemy is good to go to this direction
+                isDirSafe = true;
             }
         }
-        return false;
+
+        return newPos;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/LeftTeleporter");
-        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/RightTeleporter");
-
-        // Declare extra teleporters for third maze
-        GameObject topLeftTeleporter = GameObject.Find("Maze3/TopLeftTeleporter");
-        GameObject topRightTeleporter = GameObject.Find("Maze3/TopRightTeleporter");
-
         if (hasDied && other.gameObject.CompareTag("GhostHouse"))
         {
             hasDied = false;
@@ -192,7 +192,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
             GetComponent<Renderer>().material = normalMaterial;
 
             // Return speed back to normal
-            agent.speed = 3.5f;
+            agent.speed = startSpeed;
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
@@ -203,42 +203,9 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
                 Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
             }
         }
-        else if (other.gameObject == currentLeftTeleporter)
-        {
-            agent.enabled = false;
-            Vector3 rightPortalPos = currentRightTeleporter.transform.position;
-            transform.position = new Vector3(rightPortalPos.x - 2, 0.65f, rightPortalPos.z);
-            agent.enabled = true;
-        }
-        else if (other.gameObject == currentRightTeleporter)
-        {
-            agent.enabled = false;
-            Vector3 leftPortalPos = currentLeftTeleporter.transform.position;
-            transform.position = new Vector3(leftPortalPos.x + 2, 0.65f, leftPortalPos.z);
-            agent.enabled = true;
-        }
-        else if (other.gameObject == topLeftTeleporter)
-        {
-            Vector3 rightPortalPos = topRightTeleporter.transform.position;
-            transform.position = new Vector3(rightPortalPos.x - 2f, 0.65f, rightPortalPos.z);
-        }
-        else if (other.gameObject == topRightTeleporter)
-        {
-            Vector3 leftPortalPos = topLeftTeleporter.transform.position;
-            transform.position = new Vector3(leftPortalPos.x + 2f, 0.65f, leftPortalPos.z);
-        }
-        else if (game.GetComponent<YellowFellowGame>().InGame())
+        else if (game.InGame())
         {
             canMove = true;
-        }
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.tag == "Ghost")
-        {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), collision.collider, true);
-            Physics.IgnoreLayerCollision(8, 8);
         }
     }
 
@@ -286,6 +253,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
         transform.position = startPos;
         GetComponent<Renderer>().material = normalMaterial;
         agent.enabled = true;
+        ghostHouse = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "GhostHouse"); // Update ghost house to current maze
     }
 
     public bool HasRespawned()

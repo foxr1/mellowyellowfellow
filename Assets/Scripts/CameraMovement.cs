@@ -4,19 +4,43 @@ using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
 {
+    // UIs
     [SerializeField]
-    GameObject game;
+    GameObject userInterface;
+    [SerializeField]
+    GameObject fpUI;
+    [SerializeField]
+    GameObject countdownUI;
+    [SerializeField]
+    GameObject winUI;
+    [SerializeField]
+    GameObject pauseUI;
+    [SerializeField]
+    GameObject gameOverUI;
 
-    private float speed = 1f;
+    private GameObject[] allUIs;
+
+    [SerializeField]
+    GameObject fpFellow;
+
+    private float menuSpeed = 1f;
+    private float speed = 3f;
     private Vector3 startPos, startUIPos, nextLevelPos, levelUIPos;
-    private GameObject userInterface;
+    private Vector3 fpUIstartPos, countdownStartPos, winStartPos, pauseStartPos, gameOverStartPos;
+    private Vector3[] startPositions;
     private bool inMinigame = false;
 
     private void Start()
     {
-        userInterface = GameObject.Find("User Interface");
         startPos = transform.position;
         startUIPos = userInterface.transform.position;
+        allUIs = new GameObject[] { fpUI, countdownUI, winUI, pauseUI, gameOverUI };
+
+        startPositions = new Vector3[] { fpUIstartPos, countdownStartPos, winStartPos, pauseStartPos, gameOverStartPos };
+        for (int i = 0; i < startPositions.Length; i++)
+        {
+            startPositions[i] = allUIs[i].transform.position;
+        }
     }
 
     // Update is called once per frame
@@ -24,7 +48,7 @@ public class CameraMovement : MonoBehaviour
     {
         if (!inMinigame)
         {
-            transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(90, 0, 0), Time.deltaTime * speed);
+            transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(90, 0, 0), Time.deltaTime * menuSpeed);
         }
     }
 
@@ -33,48 +57,86 @@ public class CameraMovement : MonoBehaviour
         nextLevelPos = new Vector3(transform.position.x + ((nextLevel - currentLevel) * 31.0f), transform.position.y, transform.position.z);
         levelUIPos = new Vector3(userInterface.transform.position.x + ((nextLevel - currentLevel) * 31.0f), userInterface.transform.position.y, userInterface.transform.position.z);
 
-        while (transform.position != nextLevelPos)
+        while (!Mathf.Approximately(transform.position.magnitude, nextLevelPos.magnitude))
         {
-            userInterface.transform.position = Vector3.Lerp(userInterface.transform.position, levelUIPos, Time.deltaTime * 3);
-            transform.position = Vector3.Lerp(transform.position, nextLevelPos, Time.deltaTime * 3);
+            userInterface.transform.position = Vector3.Lerp(userInterface.transform.position, levelUIPos, Time.deltaTime * speed);
+            transform.position = Vector3.Lerp(transform.position, nextLevelPos, Time.deltaTime * speed);
             yield return new WaitForEndOfFrame();
         }
+
+        yield break;
     }
 
     public IEnumerator ReturnToStart()
     {
-        while (transform.position != startPos)
+        while (!V3Equal(transform.position, startPos))
         {
-            userInterface.transform.position = Vector3.Lerp(userInterface.transform.position, startUIPos, Time.deltaTime * 3);
-            transform.position = Vector3.Lerp(transform.position, startPos, Time.deltaTime * 3);
+            userInterface.transform.position = Vector3.Lerp(userInterface.transform.position, startUIPos, Time.deltaTime * speed);
+            transform.position = Vector3.Lerp(transform.position, startPos, Time.deltaTime * speed);
             yield return new WaitForEndOfFrame();
         }
+
+        yield break;
     }
 
     public IEnumerator AttachCameraToFellow()
     {
-        GameObject fpFellow = GameObject.Find("FPFellow");
         Vector3 fpFellowPos = fpFellow.transform.position;
-        GameObject fpUI = GameObject.Find("FPUI");
-        GameObject countdownUI = GameObject.Find("CountdownUI");
+        Vector3 cameraPos = new Vector3(fpFellowPos.x, 0.3f, fpFellowPos.z);
+        Vector3 aboveMazePos = new Vector3(transform.position.x - 31.0f, transform.position.y, transform.position.z);
         inMinigame = true;
 
-        while (true)
+        // Move to above maze
+        while (!V3Equal(transform.position, aboveMazePos))
+        {
+            transform.position = Vector3.Lerp(transform.position, aboveMazePos, Time.deltaTime * 6);
+            yield return new WaitForEndOfFrame();
+        }
+
+        while (!V3Equal(transform.position, cameraPos))
+        {
+            transform.position = Vector3.Lerp(transform.position, cameraPos, Time.deltaTime * speed);
+            transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(0, 0, 0), Time.deltaTime * speed);
+            yield return new WaitForEndOfFrame();
+        }
+
+        GetComponent<MouseLook>().enabled = true;
+        while (inMinigame)
         {
             fpFellowPos = fpFellow.transform.position;
-            Vector3 cameraPos = new Vector3(fpFellowPos.x, 0.4f, fpFellowPos.z);
 
             // Update camera position to be fixed to player
-            transform.position = cameraPos;
+            transform.position = fpFellowPos;
 
-            // Keep first person UI in front of camera
-            fpUI.transform.position = transform.position + transform.forward * 0.40f;
-            fpUI.transform.rotation = new Quaternion(0.0f, transform.rotation.y, 0.0f, transform.rotation.w);
-
-            countdownUI.transform.position = transform.position + transform.forward * 0.40f;
-            countdownUI.transform.rotation = new Quaternion(0.0f, transform.rotation.y, 0.0f, transform.rotation.w);
+            // Move all relevant UIs infront of camera
+            foreach (GameObject ui in allUIs)
+            {
+                ui.transform.position = transform.position + transform.forward * 0.40f;
+                ui.transform.rotation = new Quaternion(0.0f, transform.rotation.y, 0.0f, transform.rotation.w);
+            }
 
             yield return new WaitForEndOfFrame();
+        }
+    }
+
+    public void SetInMinigame(bool status)
+    {
+        inMinigame = status;
+    }
+
+    // Check if two vectors are approximately equal
+    public bool V3Equal(Vector3 a, Vector3 b)
+    {
+        return Vector3.SqrMagnitude(a - b) < 0.001;
+    }
+
+    // Used for resetting UIs back to original position after being altered when playing minigame
+    public void ResetUIPositions()
+    {
+        for (int i = 0; i < startPositions.Length; i++)
+        {
+            allUIs[i].transform.position = startPositions[i];
+            allUIs[i].transform.localRotation = Quaternion.Euler(90, 0, 0);
         }
     }
 }

@@ -53,22 +53,19 @@ public class RedGhost : MonoBehaviour, GhostInterface
         scatterTime = game.scatterTime;
         chaseTime = game.chaseTime;
 
-        if (game.InGame())
+        if (game.InAnyGame() && agent.isActiveAndEnabled)
         {
-            agent.speed = startSpeed;
-
             if (hasDied)
             {
                 agent.destination = ghostHouse.transform.position;
             }
             else if (player.PowerupActive() && !hasDied && !respawned)
             {
-                Debug.Log("Hiding from player");
-                if (!hiding)
+                if (!hiding || agent.remainingDistance < 0.5f)
                 {
                     hiding = true;
-                    agent.destination = PickHidingPlace();
                     GetComponent<Renderer>().material = scaredMaterial;
+                    agent.destination = PickHidingPlace();
                 }
             }
             else if (!player.PowerupActive() && respawned)
@@ -87,7 +84,6 @@ public class RedGhost : MonoBehaviour, GhostInterface
                 // If in scatter mode
                 if (scatterTime > 0.0f)
                 {
-                    Debug.Log("scatter");
                     // If ghost is currently moving towards a point
                     if (!agent.pathPending && agent.remainingDistance < 0.3f)
                     {
@@ -100,7 +96,6 @@ public class RedGhost : MonoBehaviour, GhostInterface
                 // If in chase mode
                 else if (chaseTime > 0.0f)
                 {
-                    Debug.Log("chase");
                     agent.destination = player.GetPosition();
                 }
 
@@ -109,13 +104,17 @@ public class RedGhost : MonoBehaviour, GhostInterface
 
             // Increase speed by 5% depending on pellets eaten is 1/3 or 2/3 of the total for the given maze.
             // Extra condition to check if speed has already been incremented to stop speed increasing indefinitely
-            if (agent.speed != startSpeed * 1.05f && player.PelletsEaten() == (game.GetCurrentTotalPellets() / 3))
+            if ((agent.speed != (startSpeed * 1.05f)) && (player.PelletsEaten() >= (game.GetCurrentTotalPellets() / 3)) && (player.PelletsEaten() < (game.GetCurrentTotalPellets() * 2 / 3)))
             {
                 agent.speed = startSpeed * 1.05f;
             } 
-            else if (agent.speed != startSpeed * 1.1025f && player.PelletsEaten() == (game.GetCurrentTotalPellets() * 2 / 3))
+            else if ((agent.speed != (startSpeed * 1.1025f)) && (player.PelletsEaten() >= (game.GetCurrentTotalPellets() * 2 / 3)))
             {
                 agent.speed = startSpeed * 1.1025f;
+            }
+            else if (player.PelletsEaten() < (game.GetCurrentTotalPellets() / 3))
+            {
+                agent.speed = startSpeed;
             }
         }
         else
@@ -124,54 +123,50 @@ public class RedGhost : MonoBehaviour, GhostInterface
         }
     }
 
-    Vector3 PickRandomPosition()
-    {
-        Vector3 destination = transform.position;
-        Vector2 randomDirection = UnityEngine.Random.insideUnitCircle * 8.0f;
-        destination.x += randomDirection.x;
-        destination.z += randomDirection.y;
-
-        NavMeshHit navHit;
-        NavMesh.SamplePosition(destination, out navHit, 8.0f, NavMesh.AllAreas);
-
-        return navHit.position;
-    }
-
     Vector3 PickHidingPlace()
     {
-        Vector3 directionToPlayer = (player.GetPosition() - transform.position).normalized;
+        bool isDirSafe = false;
+        float vRotation = 0;
+        Vector3 newPos = new Vector3();
 
-        NavMeshHit navHit;
-        NavMesh.SamplePosition(transform.position - (directionToPlayer * 8.0f), out navHit, 8.0f, NavMesh.AllAreas);
-
-        return navHit.position;
-    }
-
-    bool CanSeePlayer()
-    {
-        Vector3 rayPos = transform.position;
-        Vector3 rayDir = (player.GetPosition() - rayPos).normalized;
-
-        RaycastHit info;
-        if (Physics.Raycast(rayPos, rayDir, out info))
+        while (!isDirSafe)
         {
-            if (info.transform.CompareTag("Fellow"))
+            // Calculate the vector pointing from player to the ghost
+            Vector3 dirToPlayer = transform.position - player.GetPosition();
+
+            // Calculate the vector from the ghost to the direction away from the player the new point
+            newPos = transform.position + dirToPlayer;
+
+            // Rotate the direction of the ghost to move
+            newPos = Quaternion.Euler(0, vRotation, 0) * newPos;
+
+            // Shoot a Raycast out to the new direction and see if it hits an obstacle
+            bool isHit = Physics.Raycast(transform.position, newPos, out RaycastHit hit, 2f);
+
+            if (hit.transform == null)
             {
-                return true; // Ghost can see player.
+                // If the Raycast to the flee direction doesn't hit a wall then the Enemy is good to go to this direction
+                return newPos;
+            }
+
+            // Change the direction of fleeing is it hits a wall by 15 degrees
+            if (isHit && hit.transform.CompareTag("Wall"))
+            {
+                vRotation += 25;
+                isDirSafe = false;
+            }
+            else
+            {
+                // If the Raycast to the flee direction doesn't hit a wall then the Enemy is good to go to this direction
+                isDirSafe = true;
             }
         }
-        return false;
+
+        return newPos;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/LeftTeleporter");
-        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/RightTeleporter");
-
-        // Declare extra teleporters for third maze
-        GameObject topLeftTeleporter = GameObject.Find("Maze3/TopLeftTeleporter");
-        GameObject topRightTeleporter = GameObject.Find("Maze3/TopRightTeleporter");
-
         if (hasDied && other.gameObject.CompareTag("GhostHouse"))
         {
             hasDied = false;
@@ -180,7 +175,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
             GetComponent<Renderer>().material = normalMaterial;
 
             // Return speed back to normal
-            agent.speed = 3.5f;
+            agent.speed = startSpeed;
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
@@ -190,30 +185,6 @@ public class RedGhost : MonoBehaviour, GhostInterface
             {
                 Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
             }
-        }
-        else if (other.gameObject == currentLeftTeleporter)
-        {
-            agent.enabled = false;
-            Vector3 rightPortalPos = currentRightTeleporter.transform.position;
-            transform.position = new Vector3(rightPortalPos.x - 2, 0.65f, rightPortalPos.z);
-            agent.enabled = true;
-        }
-        else if (other.gameObject == currentRightTeleporter)
-        {
-            agent.enabled = false;
-            Vector3 leftPortalPos = currentLeftTeleporter.transform.position;
-            transform.position = new Vector3(leftPortalPos.x + 2, 0.65f, leftPortalPos.z);
-            agent.enabled = true;
-        }
-        else if (other.gameObject == topLeftTeleporter)
-        {
-            Vector3 rightPortalPos = topRightTeleporter.transform.position;
-            transform.position = new Vector3(rightPortalPos.x - 2f, 0.65f, rightPortalPos.z);
-        }
-        else if (other.gameObject == topRightTeleporter)
-        {
-            Vector3 leftPortalPos = topLeftTeleporter.transform.position;
-            transform.position = new Vector3(leftPortalPos.x + 2f, 0.65f, leftPortalPos.z);
         }
     }
 
@@ -261,6 +232,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
         transform.position = startPos;
         GetComponent<Renderer>().material = normalMaterial;
         agent.enabled = true;
+        ghostHouse = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "GhostHouse"); // Update ghost house to current maze
     }
 
     public bool HasRespawned()

@@ -45,7 +45,9 @@ public class Fellow : MonoBehaviour, FellowInterface
     {
         // Get start position of player to reset to when player dies
         startPos = transform.position;
-        Physics.IgnoreCollision(GetComponent<SphereCollider>(), GameObject.Find("GhostHouse").GetComponent<BoxCollider>(), false);
+
+        // Stop fellow from being able to enter the "ghost house"
+        Physics.IgnoreCollision(GetComponent<SphereCollider>(), GameObject.Find("GhostHouse").GetComponent<BoxCollider>(), false); 
     }
 
     // Update is called once per frame
@@ -96,13 +98,6 @@ public class Fellow : MonoBehaviour, FellowInterface
 
     private void OnTriggerEnter(Collider other)
     {
-        GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/LeftTeleporter");
-        GameObject currentRightTeleporter = GameObject.Find("Maze" + game.CurrentLevel().ToString() + "/RightTeleporter");
-
-        // Declare extra teleporters for third maze
-        GameObject topLeftTeleporter = GameObject.Find("Maze3/TopLeftTeleporter");
-        GameObject topRightTeleporter = GameObject.Find("Maze3/TopRightTeleporter");
-
         if (other.gameObject.CompareTag("L" + game.CurrentMaze().ToString() + "Pellet"))
         {
             pelletsEaten++;
@@ -121,26 +116,6 @@ public class Fellow : MonoBehaviour, FellowInterface
 
             powerupTime = powerupDuration;
         }
-        else if (other.gameObject == currentLeftTeleporter)
-        {
-            Vector3 rightPortalPos = currentRightTeleporter.transform.position;
-            transform.position = new Vector3(rightPortalPos.x - 1.5f, rightPortalPos.y, rightPortalPos.z);
-        }
-        else if (other.gameObject == currentRightTeleporter)
-        {
-            Vector3 leftPortalPos = currentLeftTeleporter.transform.position;
-            transform.position = new Vector3(leftPortalPos.x + 1.5f, leftPortalPos.y, leftPortalPos.z);
-        }
-        else if (other.gameObject == topLeftTeleporter)
-        {
-            Vector3 rightPortalPos = topRightTeleporter.transform.position;
-            transform.position = new Vector3(rightPortalPos.x - 1.5f, rightPortalPos.y, rightPortalPos.z);
-        }
-        else if (other.gameObject == topRightTeleporter)
-        {
-            Vector3 leftPortalPos = topLeftTeleporter.transform.position;
-            transform.position = new Vector3(leftPortalPos.x + 1.5f, leftPortalPos.y, leftPortalPos.z);
-        }
     }
 
     public bool PowerupActive()
@@ -156,6 +131,7 @@ public class Fellow : MonoBehaviour, FellowInterface
             {
                 collision.gameObject.GetComponent<GhostInterface>().GhostDied();
                 score += 200;
+                scoreText.GetComponent<Text>().text = score.ToString();
             }
             else
             {
@@ -168,8 +144,8 @@ public class Fellow : MonoBehaviour, FellowInterface
                 
                 if (lives <= 0)
                 {
-                    Debug.Log("You Died");
                     gameObject.SetActive(false);
+                    game.ShowGameOverUI();
                 }
                 else
                 {
@@ -245,6 +221,7 @@ public class Fellow : MonoBehaviour, FellowInterface
     public void SetScore(int newScore)
     {
         score = newScore;
+        scoreText.GetComponent<Text>().text = score.ToString();
     }
 
     public Vector3 GetPosition()

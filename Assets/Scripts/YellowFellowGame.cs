@@ -728,6 +728,7 @@ public class YellowFellowGame : MonoBehaviour
         {
             powerup.SetActive(true);
         }
+        minimap.GetComponent<MinimapPowerup>().Init(); // Reset random position
         minimap.SetActive(true);
 
         // Reset back to start

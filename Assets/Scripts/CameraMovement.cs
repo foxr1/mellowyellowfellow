@@ -57,7 +57,7 @@ public class CameraMovement : MonoBehaviour
         nextLevelPos = new Vector3(transform.position.x + ((nextLevel - currentLevel) * 31.0f), transform.position.y, transform.position.z);
         levelUIPos = new Vector3(userInterface.transform.position.x + ((nextLevel - currentLevel) * 31.0f), userInterface.transform.position.y, userInterface.transform.position.z);
 
-        while (!Mathf.Approximately(transform.position.magnitude, nextLevelPos.magnitude))
+        while (!V3Equal(transform.position, nextLevelPos))
         {
             userInterface.transform.position = Vector3.Lerp(userInterface.transform.position, levelUIPos, Time.deltaTime * speed);
             transform.position = Vector3.Lerp(transform.position, nextLevelPos, Time.deltaTime * speed);

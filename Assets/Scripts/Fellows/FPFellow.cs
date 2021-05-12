@@ -128,9 +128,7 @@ public class FPFellow : MonoBehaviour, FellowInterface
     {
         if (collision.gameObject.CompareTag("Ghost") && !PowerupActive())
         {
-            game.SetVolumeOfMusic(0.2f);
-            deathSound.Play(0);
-            Physics.IgnoreCollision(GetComponent<SphereCollider>(), collision.collider, true); // Disable collision with ghost
+            Physics.IgnoreCollision(controller, collision.collider, true); // Disable collision with ghost
             StartCoroutine(FellowDeath(collision.collider));
 
             // Remove life from hearts
@@ -170,7 +168,6 @@ public class FPFellow : MonoBehaviour, FellowInterface
     public IEnumerator FellowDeath(Collider ghostCollider)
     {
         lives--;
-        gameObject.SetActive(false);
         if (lives <= 0)
         {
             game.ShowGameOverUI();
@@ -178,6 +175,9 @@ public class FPFellow : MonoBehaviour, FellowInterface
         }
         else
         {
+            game.SetVolumeOfMusic(0.2f);
+            deathSound.Play(0);
+            gameObject.SetActive(false);
             // Stop ghost movements
             GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
             foreach (GameObject ghost in ghosts)

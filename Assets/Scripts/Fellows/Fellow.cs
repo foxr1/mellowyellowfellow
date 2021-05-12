@@ -116,6 +116,10 @@ public class Fellow : MonoBehaviour, FellowInterface
 
             powerupTime = powerupDuration;
         }
+        else if (other.gameObject.CompareTag("Cherry"))
+        {
+            score += 500;
+        }
     }
 
     public bool PowerupActive()

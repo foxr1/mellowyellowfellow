@@ -1,2 +1,1 @@
-ollie 10100
-testes 1600
+Ollie 10100

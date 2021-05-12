@@ -7,16 +7,20 @@ public class UIFader : MonoBehaviour
     [SerializeField]
     CanvasGroup uiElement;
     
-    public void FadeIn(float lerpTime)
+    public void FadeIn(float lerpTime, GameObject gameObject)
     {
-        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 1, lerpTime));
-    }
-    public void FadeOut(float lerpTime)
-    {
-        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 0, lerpTime));
+        // Make sure canvas is active before fading in, instead of enabling object then calling this function
+        gameObject.SetActive(true);
+        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 1, lerpTime, gameObject, true));
     }
 
-    public IEnumerator FadeCanvasGroup(CanvasGroup cg, float start, float end, float lerpTime = 1f)
+    // Extra parameter "disable" to clarify whether object should be disabled after fading out
+    public void FadeOut(float lerpTime, GameObject gameObject, bool disable)
+    {
+        StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 0, lerpTime, gameObject, !disable));
+    }
+
+    public IEnumerator FadeCanvasGroup(CanvasGroup cg, float start, float end, float lerpTime, GameObject gameObject, bool enabled)
     {
         float timeStartedLerping = Time.time;
         float timeSinceStarted = Time.time - timeStartedLerping;
@@ -35,5 +39,9 @@ public class UIFader : MonoBehaviour
 
             yield return new WaitForEndOfFrame();
         }
+
+        gameObject.SetActive(enabled);
+
+        yield break;
     }
 }

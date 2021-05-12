@@ -38,6 +38,8 @@ public class MinimapPowerup : MonoBehaviour
         }
 
         transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * speed);
+
+        // Spin around
         transform.RotateAround(transform.position, Vector3.up, Time.deltaTime * 50);
     }
 

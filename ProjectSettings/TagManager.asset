@@ -18,6 +18,7 @@ TagManager:
   - UI
   - L0Pellet
   - Minimap
+  - Cherry
   layers:
   - Default
   - TransparentFX

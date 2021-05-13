@@ -85,7 +85,8 @@ public class Fellow : MonoBehaviour, FellowInterface
                 direction = "down";
             }
             b.velocity = velocity;
-        } else
+        } 
+        else
         {
             b.velocity = Vector3.zero;
         }
@@ -106,8 +107,8 @@ public class Fellow : MonoBehaviour, FellowInterface
         } 
         else if (other.gameObject.CompareTag("Powerup")) 
         {
-            // If any ghosts have not changed back to a false respawn after previous death 
-            // while old powerup is occuring, reset to account for new powerup
+            /* If any ghosts have not changed back to a false respawn after previous death 
+            while old powerup is occuring, reset to account for new powerup */
             GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
             foreach (GameObject ghost in ghosts)
             {
@@ -119,6 +120,7 @@ public class Fellow : MonoBehaviour, FellowInterface
         else if (other.gameObject.CompareTag("Cherry"))
         {
             score += 500;
+            scoreText.GetComponent<Text>().text = score.ToString();
         }
     }
 
@@ -139,9 +141,11 @@ public class Fellow : MonoBehaviour, FellowInterface
             }
             else
             {
-                // Disable collisions to stop accidental triggers while death is occuring
+                /* Disable collisions to stop accidental triggers while death is occuring,
+                i.e. lives decreasing more than once */
                 Physics.IgnoreCollision(GetComponent<SphereCollider>(), collision.collider, true);
 
+                // Decrease game volume to let player hear death sound
                 game.SetVolumeOfMusic(0.2f);
                 deathSound.Play(0);
                 lives--;
@@ -156,6 +160,7 @@ public class Fellow : MonoBehaviour, FellowInterface
                     StartCoroutine(FellowDeath(collision.collider));
                 }
 
+                // Remove life from UI
                 livesUI.transform.GetChild(lives).localScale = Vector3.zero;
             }
         }
@@ -188,18 +193,30 @@ public class Fellow : MonoBehaviour, FellowInterface
         foreach (GameObject ghost in ghosts)
         {
             ghost.GetComponent<GhostInterface>().ResetGhost();
-            game.scatterTime = 7.0f; // Reset scatter time for ghosts
-            game.chaseTime = 20.0f; // Reset chase time for ghosts
             ghost.GetComponent<GhostInterface>().SetSpeed(3.5f);
         }
+
+        // Reset scatter and chase times for ghosts
+        game.scatterTime = 7.0f;
+        game.chaseTime = 20.0f;
 
         // Return music back to full volume
         game.SetVolumeOfMusic(1f);
 
-        // Reenable collision with ghost
+        // Re-enable collision with ghost
         Physics.IgnoreCollision(GetComponent<SphereCollider>(), ghostCollider, false);
 
         yield break;
+    }
+
+    public void ResetFellow()
+    {
+        gameObject.SetActive(true);
+        lives = 3;
+        pelletsEaten = 0;
+        powerupTime = 0;
+        score = 0;
+        GetComponent<Rigidbody>().velocity = Vector3.zero;
     }
 
     public int PelletsEaten()

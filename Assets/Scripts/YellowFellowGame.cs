@@ -46,6 +46,7 @@ public class YellowFellowGame : MonoBehaviour
     Fellow player;
     [SerializeField]
     FPFellow minigamePlayer;
+    int score = 0;
 
     // Ghosts
     GameObject[] ghosts;
@@ -154,7 +155,9 @@ public class YellowFellowGame : MonoBehaviour
                 mouseLook.enabled = false;
                 Cursor.lockState = CursorLockMode.None;
                 winPanel.SetActive(false);
-                continueText.GetComponent<Text>().text = "Restart?"; // Only one level for minigame so change "Continue?" to "Restart?"
+
+                // Only one level for minigame so change "Continue?" to "Restart?"
+                continueText.GetComponent<Text>().text = "Restart?"; 
             } 
             else if (gameMode == GameMode.InGame)
             {
@@ -164,23 +167,28 @@ public class YellowFellowGame : MonoBehaviour
             
             gameMode = GameMode.Paused;
             winUI.gameObject.SetActive(true);
-            Time.timeScale = 0;
+
+            // Stop characters from moving
+            Time.timeScale = 0; 
         }
 
         // Scatter and chase mode stages for all games.
         if (InAnyGame())
         {
-            scatterTime = Mathf.Max(0.0f, scatterTime - Time.deltaTime); // 7 seconds of scatter mode based on documentation given on ghost behaviour
+            // 7 seconds of scatter mode based on documentation given on ghost behaviour
+            scatterTime = Mathf.Max(0.0f, scatterTime - Time.deltaTime); 
 
             if (scatterTime <= 0.0f)
             {
                 if (stage < 4)
                 {
-                    chaseTime = Mathf.Max(0.0f, chaseTime - Time.deltaTime); // 20 seconds of chase mode based on documentation given on ghost behaviour
+                    // 20 seconds of chase mode based on documentation given on ghost behaviour
+                    chaseTime = Mathf.Max(0.0f, chaseTime - Time.deltaTime); 
                 }
                 else if (stage == 4)
                 {
-                    chaseTime = 1; // Once "stage 4" of mode is reached, permanently stay in chase mode
+                    // Once "stage 4" of mode is reached, permanently stay in chase mode
+                    chaseTime = 1; 
                 }
 
                 if (chaseTime <= 0.0f)
@@ -203,17 +211,16 @@ public class YellowFellowGame : MonoBehaviour
 
     void UpdateMainMenu()
     {
-        if (!gameUI.gameObject.activeSelf)
+        // Quit game by pressing escape on main menu
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (Input.GetKeyDown(KeyCode.Return))
-            {
-                StartHighScores();
-            }
+            Application.Quit();
         }
     }
 
     void UpdateHighScores()
     {
+        // Exit high scores by pressing escape
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             StartMainMenu();
@@ -229,7 +236,8 @@ public class YellowFellowGame : MonoBehaviour
             {
                 if (currentMode == GameMode.InMinigame)
                 {
-                    Cursor.lockState = CursorLockMode.Locked; // Lock cursor to center of screen for minigame
+                    // Lock cursor to center of screen for minigame
+                    Cursor.lockState = CursorLockMode.Locked; 
                 }
                 RemovePauseMenu();
             }
@@ -240,14 +248,15 @@ public class YellowFellowGame : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            Cursor.lockState = CursorLockMode.None; // Make cursor visible when in minigame
+            // Make cursor visible when in minigame
+            Cursor.lockState = CursorLockMode.None; 
             StartCoroutine(StartPauseMenu());
         }
     }
 
     void StartMainMenu()
     {
-        gameMode                        = GameMode.MainMenu;
+        gameMode = GameMode.MainMenu;
         highScoreUI.GetComponent<UIFader>().FadeOut(0.4f, highScoreUI.gameObject, true);
         GetComponent<UIFader>().FadeIn(1.6f, mainMenuUI.gameObject);
         gameUI.gameObject.SetActive(false);
@@ -259,7 +268,7 @@ public class YellowFellowGame : MonoBehaviour
 
     public void StartHighScores()
     {
-        gameMode                = GameMode.HighScores;
+        gameMode = GameMode.HighScores;
         GetComponent<UIFader>().FadeOut(0.4f, mainMenuUI.gameObject, true);
         highScoreUI.GetComponent<UIFader>().FadeIn(0.4f, highScoreUI.gameObject);
         gameUI.gameObject.SetActive(false);
@@ -274,13 +283,13 @@ public class YellowFellowGame : MonoBehaviour
         pauseUI.gameObject.SetActive(true);
         pausePanel.SetActive(!(currentMode == GameMode.InMinigame)); // Disable panel when in minigame as it is not needed
 
-        gameMode                = GameMode.Paused;
+        gameMode = GameMode.Paused;
 
         Time.timeScale = 0;
         while (true)
         {
-            // Using "WaitForSecondsRealtime" to avoid problem of pausing game time so that the
-            // blinking text can still happen
+            /* Using "WaitForSecondsRealtime" to avoid problem of pausing game time so that the
+            blinking text can still happen */
             pausedText.SetActive(true);
             yield return new WaitForSecondsRealtime(0.3f);
             pausedText.SetActive(false);
@@ -293,6 +302,85 @@ public class YellowFellowGame : MonoBehaviour
         gameMode = currentMode;
         pauseUI.gameObject.SetActive(false);
         Time.timeScale = 1;
+    }
+
+    public void ShowSaveUI()
+    {
+        Time.timeScale = 1;
+
+        // Stop level music and play main menu music
+        audioClips[maze].Stop();
+        menuMusic.Play(0);
+
+        // If in minigame, reset minigame and animate camera back to main screen for saving score
+        if (currentMode == GameMode.InGame)
+        {
+            score = player.GetScore();
+            ResetGame();
+        }
+        else if (currentMode == GameMode.InMinigame)
+        {
+            score = minigamePlayer.GetScore();
+            ResetMinigame();
+            cameraMovement.SetInMinigame(false);
+            StartCoroutine(cameraMovement.ReturnToStart());
+        }
+
+        player.pelletsEaten = 0; // Set pellets eaten to 0 to stop winUI from being shown in Update function
+
+        winUI.gameObject.SetActive(false);
+        gameOverUI.SetActive(false);
+        saveUI.gameObject.SetActive(true);
+    }
+
+    public void SaveScore()
+    {
+        audioClips[maze].Stop();
+
+        string name = GameObject.Find("NameText").GetComponent<Text>().text;
+        string saveMode = "";
+        if (currentMode == GameMode.InGame)
+        {
+            saveMode = "game";
+        }
+        else if (currentMode == GameMode.InMinigame)
+        {
+            saveMode = "minigame";
+        }
+
+        highScoreUI.GetComponent<HighScoreTable>().SaveScore(name, score, saveMode);
+
+        saveUI.gameObject.SetActive(false);
+        gameUI.gameObject.SetActive(false);
+        GetComponent<UIFader>().FadeIn(0.4f, mainMenuUI.gameObject); // Fade in menu
+
+        if (maze != 1)
+        {
+            StartCoroutine(cameraMovement.ReturnToStart());
+        }
+
+        player.SetScore(0);
+        ResetCharacters(1, maze);
+
+        menuMusic.Play(0);
+    }
+
+    public void ShowGameOverUI()
+    {
+        if (gameMode == GameMode.InMinigame)
+        {
+            minimapCamera.SetActive(false);
+            mouseLook.enabled = false;
+            Cursor.lockState = CursorLockMode.None;
+            gameOverPanel.SetActive(false);
+        }
+        else if (gameMode == GameMode.InGame)
+        {
+            gameOverPanel.SetActive(true);
+        }
+
+        gameMode = GameMode.Paused;
+        gameOverUI.SetActive(true);
     }
 
     public void StartGame()
@@ -356,8 +444,8 @@ public class YellowFellowGame : MonoBehaviour
 
     private IEnumerator StartCountdown(GameMode mode)
     {
-        // If player is not on the first level, wait before countdown to allow time for
-        // camera to pan over to next level
+        /* If player is not on the first level, wait before countdown to allow time for
+        camera to pan over to next level */
         if (level != 1)
         {
             yield return new WaitForSeconds(1.2f);
@@ -373,12 +461,17 @@ public class YellowFellowGame : MonoBehaviour
         } 
         else if (mode == GameMode.InMinigame)
         {
-            yield return new WaitForSeconds(3f); // Wait for camera animation to finish before executing
-            countdownUI.transform.localScale = Vector3.one * 0.005f; // Set size to fit infront of player
+            // Wait for camera animation to finish starting countdown
+            yield return new WaitForSeconds(3f); 
+
+            // Set size of all UIs to fit infront of player
+            countdownUI.transform.localScale = Vector3.one * 0.005f; 
             winUI.transform.localScale = Vector3.one * 0.005f;
             pauseUI.transform.localScale = Vector3.one * 0.005f;
             gameOverUI.transform.localScale = Vector3.one * 0.005f;
-            countdownPanel.SetActive(false); // Disable panel from countdown UI for first person view
+
+            // Disable panel from countdown UI for first person view
+            countdownPanel.SetActive(false); 
         }
         
 
@@ -430,7 +523,7 @@ public class YellowFellowGame : MonoBehaviour
         // Reset text back to nothing for next countdown
         countdownNumber.GetComponent<Text>().text = "";
 
-        // Start the game mechanics
+        // Start the game
         gameMode = mode;
         audioClips[maze].Play(0);
         countdownUI.gameObject.SetActive(false);
@@ -439,26 +532,11 @@ public class YellowFellowGame : MonoBehaviour
     public void NextLevel()
     {
         Time.timeScale = 1;
+
         // Check if player is in minigame and whether restart function should be called.
         if (currentMode == GameMode.InMinigame)
         {
             ResetMinigame();
-
-            // Reset timers
-            scatterTime = 7.0f;
-            chaseTime = 20.0f;
-
-            // Reset ghost properties
-            foreach (GameObject ghost in ghosts)
-            {
-                GhostInterface ghostInterface = ghost.GetComponent<GhostInterface>();
-                ghostInterface.SetNavMeshAgent(false); // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
-                ghostInterface.ResetGhost();
-                ghostInterface.SetPlayerTarget(minigamePlayer.GetComponent<FellowInterface>());
-                ghostInterface.SetSpeed(1.5f);
-                ghostInterface.SetScatterPoints(maze);
-                ghostInterface.SetNavMeshAgent(true);
-            }
 
             countdownUI.gameObject.SetActive(true);
             StartCoroutine(StartCountdown(GameMode.InMinigame));
@@ -470,14 +548,14 @@ public class YellowFellowGame : MonoBehaviour
             winUI.gameObject.SetActive(false);
             gameMode = GameMode.Paused;
 
-            // Reset fellow properties
+            // Reset fellow properties for next level
             if (player.lives < 3) // Give player an extra life between levels as long as it's less than 3
             {
                 player.lives++;
             }
             player.pelletsEaten = 0;
             player.powerupTime = 0;
-            player.GetComponent<Rigidbody>().velocity = Vector3.zero;
+            player.GetComponent<Rigidbody>().velocity = Vector3.zero; // If player has previous momentum, reset to zero
 
             // Show lives UI
             Vector3 lifeSize = new Vector3(1.87622f, 1.87622f, 0.1f);
@@ -499,7 +577,7 @@ public class YellowFellowGame : MonoBehaviour
             level++;
             pellets = allPellets[maze - 1];
 
-            // Set all pellets and powerups to be active incase maze has already been played
+            // Set all collectables to be active incase maze has already been played
             foreach (GameObject pellet in pellets)
             {
                 pellet.SetActive(true);
@@ -517,6 +595,7 @@ public class YellowFellowGame : MonoBehaviour
             // Move camera to next level
             StartCoroutine(cameraMovement.MoveCameraToLevel(previousMaze, maze));
 
+            // Move characters to next maze
             ResetCharacters(maze, previousMaze);
 
             StartGame();
@@ -544,23 +623,8 @@ public class YellowFellowGame : MonoBehaviour
         else if (currentMode == GameMode.InMinigame)
         {
             ResetMinigame();
-
-            // Reset timers
-            scatterTime = 7.0f;
-            chaseTime = 20.0f;
-
-            // Reset ghost properties
-            foreach (GameObject ghost in ghosts)
-            {
-                GhostInterface ghostInterface = ghost.GetComponent<GhostInterface>();
-                ghostInterface.SetNavMeshAgent(false); // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
-                ghostInterface.ResetGhost();
-                ghostInterface.SetPlayerTarget(minigamePlayer.GetComponent<FellowInterface>());
-                ghostInterface.SetSpeed(1.5f);
-                ghostInterface.SetScatterPoints(maze);
-                ghostInterface.SetNavMeshAgent(true);
-            }
-
+            Cursor.lockState = CursorLockMode.Locked;
+            mouseLook.enabled = true;
             countdownUI.gameObject.SetActive(true);
             StartCoroutine(StartCountdown(GameMode.InMinigame));
         }
@@ -572,7 +636,7 @@ public class YellowFellowGame : MonoBehaviour
 
         Time.timeScale = 1;
 
-        // If player is not on the first maze then move camera back
+        // If player is not on the first maze then move camera back to it
         if (maze != 1)
         {
             mouseLook.enabled = false;
@@ -580,6 +644,7 @@ public class YellowFellowGame : MonoBehaviour
             StartCoroutine(cameraMovement.ReturnToStart());
         }
 
+        // Reset all characters to first maze
         ResetCharacters(1, maze);
         if (currentMode == GameMode.InGame)
         {
@@ -642,12 +707,7 @@ public class YellowFellowGame : MonoBehaviour
         gameMode = GameMode.Paused;
 
         // Reset fellow properties
-        player.gameObject.SetActive(true);
-        player.lives = 3;
-        player.pelletsEaten = 0;
-        player.powerupTime = 0;
-        player.SetScore(0);
-        player.GetComponent<Rigidbody>().velocity = Vector3.zero;
+        player.ResetFellow();
 
         // Reset all lives to show on screen
         Vector3 lifeSize = new Vector3(1.87622f, 1.87622f, 0.1f);
@@ -671,20 +731,20 @@ public class YellowFellowGame : MonoBehaviour
         {
             powerup.SetActive(true);
         }
+        cherry.SetActive(true);
     }
 
     private void ResetMinigame()
     {
+        audioClips[maze].Stop();
         minigamePlayer.gameObject.SetActive(true); // Re-enable fellow
-
-        // Reset fellow properties
-        minigamePlayer.lives = 3;
-        minigamePlayer.pelletsEaten = 0;
-        minigamePlayer.powerupTime = 0;
-        minigamePlayer.SetScore(0);
 
         winUI.gameObject.SetActive(false);
         gameOverUI.SetActive(false);
+
+        // Reset timers
+        scatterTime = 7.0f;
+        chaseTime = 20.0f;
 
         // Show all lives again
         Vector3 lifeSize = new Vector3(1.87622f, 1.87622f, 0.1f);
@@ -705,8 +765,20 @@ public class YellowFellowGame : MonoBehaviour
         minimap.GetComponent<MinimapPowerup>().Init(); // Reset random position
         minimap.SetActive(true);
 
-        // Reset back to start
-        minigamePlayer.transform.position = minigamePlayer.GetStartPos();
+        // Reset ghost properties
+        foreach (GameObject ghost in ghosts)
+        {
+            GhostInterface ghostInterface = ghost.GetComponent<GhostInterface>();
+            ghostInterface.SetNavMeshAgent(false); // Ghost will not move position unless nav mesh agent is inactive so temporarily disable
+            ghostInterface.ResetGhost();
+            ghostInterface.SetPlayerTarget(minigamePlayer.GetComponent<FellowInterface>());
+            ghostInterface.SetSpeed(1.5f);
+            ghostInterface.SetScatterPoints(maze);
+            ghostInterface.SetNavMeshAgent(true);
+        }
+
+        // Reset fellow properties and set position back to start
+        minigamePlayer.ResetFellow();
     }
 
     public bool InAnyGame()
@@ -734,58 +806,6 @@ public class YellowFellowGame : MonoBehaviour
         return maze;
     }
 
-    public void ShowSaveUI()
-    {
-        // If in minigame, reset minigame and animate camera back to main screen for saving score
-        if (currentMode == GameMode.InMinigame)
-        {
-            ResetMinigame();
-            cameraMovement.SetInMinigame(false);
-            StartCoroutine(cameraMovement.ReturnToStart());
-        }
-
-        player.pelletsEaten = 0; // Set pellets eaten to 0 to stop winUI from being shown in Update function
-
-        winUI.gameObject.SetActive(false);
-        gameOverUI.SetActive(false);
-        saveUI.gameObject.SetActive(true);
-    }
-
-    public void SaveScore()
-    {
-        audioClips[maze].Stop();
-
-        string name = GameObject.Find("NameText").GetComponent<Text>().text;
-        int score = 0;
-        string saveMode = "";
-        if (currentMode == GameMode.InGame)
-        {
-            score = player.GetScore();
-            saveMode = "game";
-        }
-        else if (currentMode == GameMode.InMinigame)
-        {
-            score = minigamePlayer.GetScore();
-            saveMode = "minigame";
-        }
-
-        highScoreUI.GetComponent<HighScoreTable>().SaveScore(name, score, saveMode);
-
-        saveUI.gameObject.SetActive(false);
-        gameUI.gameObject.SetActive(false);
-        GetComponent<UIFader>().FadeIn(0.4f, mainMenuUI.gameObject); // Fade in menu
-
-        if (maze != 1)
-        {
-            StartCoroutine(cameraMovement.ReturnToStart());
-        }
-
-        player.SetScore(0);
-        ResetCharacters(1, maze);
-
-        menuMusic.Play(0);
-    }
-
     public int GetCurrentTotalPellets()
     {
         return pellets.Length;
@@ -794,23 +814,5 @@ public class YellowFellowGame : MonoBehaviour
     public void SetVolumeOfMusic(float volume)
     {
         audioClips[maze].volume = volume;
-    }
-
-    public void ShowGameOverUI()
-    {
-        if (gameMode == GameMode.InMinigame)
-        {
-            minimapCamera.SetActive(false);
-            mouseLook.enabled = false;
-            Cursor.lockState = CursorLockMode.None;
-            gameOverPanel.SetActive(false);
-        }
-        else if (gameMode == GameMode.InGame)
-        {
-            gameOverPanel.SetActive(true);
-        }
-
-        gameMode = GameMode.Paused;
-        gameOverUI.SetActive(true);
     }
 }

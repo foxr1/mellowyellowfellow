@@ -8,6 +8,7 @@ public class FPRightTeleporter : MonoBehaviour
     [SerializeField]
     Transform targetTeleporter;
 
+    // Minigame teleporters are not triggers, so use OnCollision method instead to detect ghost collisions
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Ghost"))

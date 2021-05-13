@@ -61,8 +61,6 @@ public class FPFellow : MonoBehaviour, FellowInterface
     // Update is called once per frame
     void Update()
     {
-        pelletsRemaining = game.GetCurrentTotalPellets() - pelletsEaten;
-
         if (game.InMinigame())
         {
             controller.enabled = true;
@@ -108,12 +106,13 @@ public class FPFellow : MonoBehaviour, FellowInterface
             pelletsEaten++;
             score += pointsPerPellet;
             scoreText.GetComponent<Text>().text = score.ToString();
+            pelletsRemaining = game.GetCurrentTotalPellets() - pelletsEaten;
             pelletsRemainingText.GetComponent<Text>().text = pelletsRemaining.ToString();
         }
         else if (other.gameObject.CompareTag("Powerup"))
         {
-            // If any ghosts have not changed back to a false respawn after previous death 
-            // while old powerup is occuring, reset to account for new powerup
+            /* If any ghosts have not changed back to a false respawn after previous death 
+            while old powerup is occuring, reset to account for new powerup */
             GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
             foreach (GameObject ghost in ghosts)
             {
@@ -130,14 +129,11 @@ public class FPFellow : MonoBehaviour, FellowInterface
         {
             Physics.IgnoreCollision(controller, collision.collider, true); // Disable collision with ghost
             StartCoroutine(FellowDeath(collision.collider));
-
-            // Remove life from hearts
-            livesUI.transform.GetChild(lives).localScale = Vector3.zero;
         }
     }
 
-    // When using a Character Controller, must use this function for detecting collisions
-    // Both teleporters have their triggers turned off so that it is a collision
+    /* When using a Character Controller, must use this function for detecting collisions,
+    both teleporters have their triggers turned off so that it is a collision */
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
         GameObject currentLeftTeleporter = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "/LeftTeleporter");
@@ -147,6 +143,7 @@ public class FPFellow : MonoBehaviour, FellowInterface
         {
             hit.gameObject.GetComponent<GhostInterface>().GhostDied();
             score += 200;
+            scoreText.GetComponent<Text>().text = score.ToString();
         }
         else if (hit.gameObject == currentLeftTeleporter)
         {
@@ -175,9 +172,13 @@ public class FPFellow : MonoBehaviour, FellowInterface
         }
         else
         {
+            // Remove life from hearts
+            livesUI.transform.GetChild(lives).localScale = Vector3.zero;
+
             game.SetVolumeOfMusic(0.2f);
             deathSound.Play(0);
             gameObject.SetActive(false);
+
             // Stop ghost movements
             GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
             foreach (GameObject ghost in ghosts)
@@ -206,6 +207,20 @@ public class FPFellow : MonoBehaviour, FellowInterface
 
             yield break;
         }
+    }
+
+    public void ResetFellow()
+    {
+        lives = 3;
+        pelletsEaten = 0;
+        powerupTime = 0;
+        score = 0;
+        pelletsRemaining = 118;
+        transform.position = GetStartPos();
+
+        // Reset HUD text
+        scoreText.GetComponent<Text>().text = score.ToString();
+        pelletsRemainingText.GetComponent<Text>().text = pelletsRemaining.ToString();
     }
 
     public int PelletsEaten()

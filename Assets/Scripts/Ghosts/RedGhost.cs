@@ -84,7 +84,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
                 // If in scatter mode
                 if (scatterTime > 0.0f)
                 {
-                    // If ghost is currently moving towards a point
+                    // If ghost is not currently moving towards a point, then patrol through scatter points
                     if (!agent.pathPending && agent.remainingDistance < 0.3f)
                     {
                         destPoint = (destPoint + 1) % scatterPoints.Length;
@@ -183,7 +183,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
             GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
             foreach (GameObject fellow in fellows)
             {
-                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
+                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
             }
         }
     }
@@ -207,7 +207,7 @@ public class RedGhost : MonoBehaviour, GhostInterface
         GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
         foreach (GameObject fellow in fellows)
         {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), true);
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), true);
         }
 
         // Increase speed so it returns to ghost house quicker
@@ -233,12 +233,20 @@ public class RedGhost : MonoBehaviour, GhostInterface
         GetComponent<Renderer>().material = normalMaterial;
         agent.enabled = true;
         ghostHouse = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "GhostHouse"); // Update ghost house to current maze
+        
+        // Enable collisions for all types of fellow
+        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+        foreach (GameObject fellow in fellows)
+        {
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
+        }
     }
 
     public bool HasRespawned()
     {
         return respawned;
     }
+
     public void ResetRespawn()
     {
         respawned = false;

@@ -91,7 +91,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
 
                     if (scatterTime > 0.0f)
                     {
-                        // If ghost is currently moving towards a point
+                        // If ghost is not currently moving towards a point, then patrol through scatter points
                         if (!agent.pathPending && agent.remainingDistance < 0.3f)
                         {
                             destPoint = (destPoint + 1) % scatterPoints.Length;
@@ -104,9 +104,9 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
                     {
                         if (chaseTime > 0.0f)
                         {
-                            // Orange ghost will only chase if it is further than "8 tiles" away from the player
-                            // When looking at the logged distance, it very rarely will be a distance of 8 away,
-                            // so I lowered this number to factor for this.
+                            /* Orange ghost will only chase if it is further than "8 tiles" away from the player.
+                            When looking at the logged distance, it very rarely will be a distance of 8 away,
+                            so I lowered this number to factor for this. */
 
                             Vector3 playerPos = player.GetPosition();
                             Vector3 ghostPos = this.transform.position;
@@ -196,11 +196,11 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
-            // Disable collisions for all types of fellow
+            // Enable collisions for all types of fellow
             GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
             foreach (GameObject fellow in fellows)
             {
-                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
+                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
             }
         }
         else if (game.InGame())
@@ -228,7 +228,7 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
         GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
         foreach (GameObject fellow in fellows)
         {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), true);
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), true);
         }
 
         // Increase speed so it returns to ghost house quicker
@@ -254,12 +254,20 @@ public class OrangeGhost : MonoBehaviour, GhostInterface
         GetComponent<Renderer>().material = normalMaterial;
         agent.enabled = true;
         ghostHouse = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "GhostHouse"); // Update ghost house to current maze
+
+        // Enable collisions for all types of fellow
+        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+        foreach (GameObject fellow in fellows)
+        {
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
+        }
     }
 
     public bool HasRespawned()
     {
         return respawned;
     }
+
     public void ResetRespawn()
     {
         respawned = false;

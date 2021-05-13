@@ -16,6 +16,7 @@ public class MinimapPowerup : MonoBehaviour
         Init();
     }
 
+    // Init function for resetting this position when minigame has been completed once
     public void Init()
     {
         startPos = transform.position;
@@ -27,7 +28,7 @@ public class MinimapPowerup : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Move between the start and end vectors
+        // Move up and down slightly for movement
         if (Mathf.Approximately(transform.position.magnitude, endPos.magnitude))
         {
             targetPos = randomPos;
@@ -43,6 +44,7 @@ public class MinimapPowerup : MonoBehaviour
         transform.RotateAround(transform.position, Vector3.up, Time.deltaTime * 50);
     }
 
+    // Find random position within NavMesh so it's placed appropriately
     Vector3 SetRandomPosition()
     {
         Vector3 randomDirection = Random.insideUnitSphere * 8;

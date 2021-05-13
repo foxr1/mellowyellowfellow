@@ -92,7 +92,7 @@ public class BlueGhost : MonoBehaviour, GhostInterface
 
                     if (scatterTime > 0.0f)
                     {
-                        // If ghost is currently moving towards a point
+                        // If ghost is not currently moving towards a point, then patrol through scatter points
                         if (!agent.pathPending && agent.remainingDistance < 0.3f)
                         {
                             destPoint = (destPoint + 1) % scatterPoints.Length;
@@ -105,10 +105,10 @@ public class BlueGhost : MonoBehaviour, GhostInterface
                     {
                         if (chaseTime > 0.0f)
                         {
-                            // Blue ghost uses the red ghosts position in it's calculation for the target position,
-                            // it looks "2 tiles" in front of the player and then calculates a vector from the red
-                            // ghosts position to the position in front of the player and then doubles the length 
-                            // to give the target position.
+                            /* Blue ghost uses the red ghosts position in its calculation for the target position,
+                            it looks "2 tiles" in front of the player and then calculates a vector from the red
+                            ghosts position to the position in front of the player and then doubles the length 
+                            to give the target position. */
 
                             Vector3 redGhostPos = GameObject.Find("RedGhost").transform.position;
                             Vector3 inFrontOfPlayerPos = Vector3.zero;
@@ -207,7 +207,7 @@ public class BlueGhost : MonoBehaviour, GhostInterface
             GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
             foreach (GameObject fellow in fellows)
             {
-                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
+                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
             }
         }
         else if (game.InGame())
@@ -235,7 +235,7 @@ public class BlueGhost : MonoBehaviour, GhostInterface
         GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
         foreach (GameObject fellow in fellows)
         {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), true);
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), true);
         }
 
         // Increase speed so it returns to ghost house quicker
@@ -261,6 +261,13 @@ public class BlueGhost : MonoBehaviour, GhostInterface
         GetComponent<Renderer>().material = normalMaterial;
         agent.enabled = true;
         ghostHouse = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "GhostHouse"); // Update ghost house to current maze
+
+        // Enable collisions for all types of fellow
+        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+        foreach (GameObject fellow in fellows)
+        {
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
+        }
     }
 
     public bool HasRespawned()

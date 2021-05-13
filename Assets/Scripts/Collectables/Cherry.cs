@@ -6,12 +6,10 @@ using UnityEngine.AI;
 public class Cherry : MonoBehaviour
 {
     public NavMeshAgent agent;
-    private Vector3 startPos;
 
     // Start is called before the first frame update
     void Start()
     {
-        startPos = transform.position;
         agent = GetComponent<NavMeshAgent>();
         agent.destination = PickRandomPosition();
     }
@@ -19,7 +17,7 @@ public class Cherry : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (agent.remainingDistance < 0.5f)
+        if (agent.isOnNavMesh && agent.remainingDistance < 0.5f)
         {
             agent.destination = PickRandomPosition();
         }

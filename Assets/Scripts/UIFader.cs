@@ -20,6 +20,7 @@ public class UIFader : MonoBehaviour
         StartCoroutine(FadeCanvasGroup(uiElement, uiElement.alpha, 0, lerpTime, gameObject, !disable));
     }
 
+    // Adapted from a tutorial found at https://www.youtube.com/watch?v=92Fz3BjjPL8
     public IEnumerator FadeCanvasGroup(CanvasGroup cg, float start, float end, float lerpTime, GameObject gameObject, bool enabled)
     {
         float timeStartedLerping = Time.time;

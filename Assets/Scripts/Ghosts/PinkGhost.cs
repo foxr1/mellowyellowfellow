@@ -86,7 +86,7 @@ public class PinkGhost : MonoBehaviour, GhostInterface
 
                 if (scatterTime > 0.0f)
                 {
-                    // If ghost is currently moving towards a point
+                    // If ghost is not currently moving towards a point, then patrol through scatter points
                     if (!agent.pathPending && agent.remainingDistance < 0.3f)
                     {
                         destPoint = (destPoint + 1) % scatterPoints.Length;
@@ -99,9 +99,9 @@ public class PinkGhost : MonoBehaviour, GhostInterface
                 {
                     if (chaseTime > 0.0f)
                     {
-                        // Pink ghost follows player "4 tiles" in front of actual position according to
-                        // ghost behaviour documentation, using the direction they are facing to determine
-                        // where they should be following.
+                        /* Pink ghost follows player "4 tiles" in front of actual position according to
+                        ghost behaviour documentation, using the direction they are facing to determine
+                        where they should be following. */
 
                         Vector3 targetPos = Vector3.zero;
                         Vector3 playerPos = player.GetPosition();
@@ -191,11 +191,11 @@ public class PinkGhost : MonoBehaviour, GhostInterface
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
-            // Disable collisions for all types of fellow
+            // Enable collisions for all types of fellow
             GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
             foreach (GameObject fellow in fellows)
             {
-                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), false);
+                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
             }
         }
     }
@@ -219,7 +219,7 @@ public class PinkGhost : MonoBehaviour, GhostInterface
         GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
         foreach (GameObject fellow in fellows)
         {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<SphereCollider>(), true);
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), true);
         }
 
         // Increase speed so it returns to ghost house quicker
@@ -245,12 +245,20 @@ public class PinkGhost : MonoBehaviour, GhostInterface
         GetComponent<Renderer>().material = normalMaterial;
         agent.enabled = true;
         ghostHouse = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "GhostHouse"); // Update ghost house to current maze
+
+        // Enable collisions for all types of fellow
+        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
+        foreach (GameObject fellow in fellows)
+        {
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
+        }
     }
 
     public bool HasRespawned()
     {
         return respawned;
     }
+
     public void ResetRespawn()
     {
         respawned = false;

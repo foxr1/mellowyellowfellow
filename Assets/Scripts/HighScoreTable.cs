@@ -51,9 +51,9 @@ public class HighScoreTable : MonoBehaviour
         scoreObjects = new GameObject[allScores.Count];
         for (int i = 0; i < allScores.Count; ++i) 
         {
-            // Changed to end loop at 10 to remove overflowing out of UI when loading high scores
-            // Used a break statement instead of changing end parameter to factor for if there are 
-            // less than 10 entries in the .txt and throwing an error.
+            /* Changed to end loop at 10 to remove overflowing out of UI when loading high scores
+            Used a break statement instead of changing end parameter to factor for if there are 
+            less than 10 entries in the .txt and throwing an error. */
             if (i == 10)
             {
                 break;
@@ -104,8 +104,8 @@ public class HighScoreTable : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        // As assets are combined on build, this makes a new file will all the scores from the
-        // files within resources.
+        /* As assets are combined on build, this makes a new file will all the scores from the
+        files within resources. */
         highScoreFile = "scores.txt";
         minigameHighScoreFile = "minigame_scores.txt";
 
@@ -125,6 +125,7 @@ public class HighScoreTable : MonoBehaviour
 
     public void SetHighScore()
     {
+        // Load high scores and get highest to display in game
         LoadHighScoreTable(highScoreFile);
         SortHighScoreEntries();
         highScoreText.GetComponent<Text>().text = allScores[0].score.ToString();
@@ -132,6 +133,7 @@ public class HighScoreTable : MonoBehaviour
 
     public void SetHighScoreTable(string mode)
     {
+        // Clear high scores when switching between main game and minigame high scores
         allScores.Clear();
         foreach (GameObject scoreObject in scoreObjects)
         {

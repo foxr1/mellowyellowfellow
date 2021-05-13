@@ -34,6 +34,8 @@ public class CameraMovement : MonoBehaviour
     {
         startPos = transform.position;
         startUIPos = userInterface.transform.position;
+
+        // Only contains relevant UIs for minigame
         allUIs = new GameObject[] { fpUI, countdownUI, winUI, pauseUI, gameOverUI };
 
         startPositions = new Vector3[] { fpUIstartPos, countdownStartPos, winStartPos, pauseStartPos, gameOverStartPos };
@@ -46,6 +48,7 @@ public class CameraMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // If not in the minigame, animate the camera to rotate looking down at the maze
         if (!inMinigame)
         {
             transform.localRotation = Quaternion.Lerp(transform.localRotation, Quaternion.Euler(90, 0, 0), Time.deltaTime * menuSpeed);
@@ -93,6 +96,7 @@ public class CameraMovement : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
 
+        // Move camera down into minigame player and then look forward
         while (!V3Equal(transform.position, cameraPos))
         {
             transform.position = Vector3.Lerp(transform.position, cameraPos, Time.deltaTime * speed);
@@ -100,6 +104,7 @@ public class CameraMovement : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
 
+        // Enable mouse movement with camera then attach camera to fellow position
         GetComponent<MouseLook>().enabled = true;
         while (inMinigame)
         {
@@ -124,7 +129,8 @@ public class CameraMovement : MonoBehaviour
         inMinigame = status;
     }
 
-    // Check if two vectors are approximately equal
+    /* Check if two vectors are approximately equal,
+    adapted from https://answers.unity.com/questions/395513/vector3-comparison-efficiency-and-float-precision.html */
     public bool V3Equal(Vector3 a, Vector3 b)
     {
         return Vector3.SqrMagnitude(a - b) < 0.001;

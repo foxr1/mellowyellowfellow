@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 public class HighScoreTable : MonoBehaviour
 {
-    // Text files and paths
+    // Text files
     string highScoreFile, minigameHighScoreFile;
 
     // UI Elements
@@ -33,7 +33,6 @@ public class HighScoreTable : MonoBehaviour
             string text = null;
             while ((text = file.ReadLine()) != null)
             {
-                Debug.Log(text);
                 string[] splits = text.Split(' ');
                 HighScoreEntry entry;
                 entry.name = splits[0];

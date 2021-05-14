@@ -141,6 +141,10 @@ public class Fellow : MonoBehaviour, FellowInterface
             }
             else
             {
+                /* If player has powerup but has been killed by ghost that has respawned 
+                during powerup, reset powerup time */
+                powerupTime = 0;
+
                 /* Disable collisions to stop accidental triggers while death is occuring,
                 i.e. lives decreasing more than once */
                 Physics.IgnoreCollision(GetComponent<SphereCollider>(), collision.collider, true);
@@ -216,6 +220,7 @@ public class Fellow : MonoBehaviour, FellowInterface
         pelletsEaten = 0;
         powerupTime = 0;
         score = 0;
+        scoreText.GetComponent<Text>().text = score.ToString();
         GetComponent<Rigidbody>().velocity = Vector3.zero;
     }
 
@@ -248,5 +253,10 @@ public class Fellow : MonoBehaviour, FellowInterface
     public Vector3 GetPosition()
     {
         return transform.position;
+    }
+
+    public Collider GetCollider()
+    {
+        return GetComponent<SphereCollider>();
     }
 }

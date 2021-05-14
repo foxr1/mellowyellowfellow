@@ -11,6 +11,9 @@ public class MinimapPowerup : MonoBehaviour
     [SerializeField]
     GameObject minimapCamera;
 
+    [SerializeField]
+    YellowFellowGame game;
+
     void Start()
     {
         Init();
@@ -58,8 +61,16 @@ public class MinimapPowerup : MonoBehaviour
     {
         if (other.gameObject.CompareTag("Fellow"))
         {
-            minimapCamera.SetActive(true);
-            gameObject.SetActive(false);
+            // If random position is same as fellow on game start, get new random position
+            if (!game.InMinigame())
+            {
+                Init();
+            }
+            else
+            {
+                minimapCamera.SetActive(true);
+                gameObject.SetActive(false);
+            }
         }
     }
 }

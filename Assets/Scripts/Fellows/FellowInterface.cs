@@ -4,9 +4,10 @@ using UnityEngine;
 
 public interface FellowInterface
 {
-    public bool PowerupActive();
-    public Vector3 GetPosition();
-    public int PelletsEaten();
-    public string GetDirection();
-    public void SetScore(int newScore);
+    bool PowerupActive();
+    Vector3 GetPosition();
+    int PelletsEaten();
+    string GetDirection();
+    void SetScore(int newScore);
+    Collider GetCollider();
 }

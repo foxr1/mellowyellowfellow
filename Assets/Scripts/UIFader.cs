@@ -41,7 +41,12 @@ public class UIFader : MonoBehaviour
             yield return new WaitForEndOfFrame();
         }
 
-        gameObject.SetActive(enabled);
+        // Only execute if object needs to be disabled, object is already enabled before coroutine starts
+        // Prevents issue with fade in re-enabling object if player presses start too quickly
+        if (!enabled)
+        {
+            gameObject.SetActive(enabled);
+        }
 
         yield break;
     }

@@ -127,8 +127,9 @@ public class FPFellow : MonoBehaviour, FellowInterface
     {
         if (collision.gameObject.CompareTag("Ghost") && !PowerupActive())
         {
-            Physics.IgnoreCollision(controller, collision.collider, true); // Disable collision with ghost
-            StartCoroutine(FellowDeath(collision.collider));
+            // Disable collision with ghost to stop accidentally triggering again while death is occuring
+            Physics.IgnoreCollision(controller, collision.collider, true); 
+            FellowDeath(collision.collider);
         }
     }
 
@@ -141,6 +142,7 @@ public class FPFellow : MonoBehaviour, FellowInterface
 
         if (hit.gameObject.CompareTag("Ghost") && PowerupActive() && !hit.gameObject.GetComponent<GhostInterface>().HasRespawned())
         {
+            Physics.IgnoreCollision(controller, hit.collider, true);
             hit.gameObject.GetComponent<GhostInterface>().GhostDied();
             score += 200;
             scoreText.GetComponent<Text>().text = score.ToString();
@@ -162,16 +164,19 @@ public class FPFellow : MonoBehaviour, FellowInterface
         return powerupTime > 0.0f;
     }
 
-    public IEnumerator FellowDeath(Collider ghostCollider)
+    public void FellowDeath(Collider ghostCollider)
     {
         lives--;
         if (lives <= 0)
         {
             game.ShowGameOverUI();
-            yield break;
         }
         else
         {
+            /* If player has powerup but has been killed by ghost that has respawned 
+                during powerup, reset powerup time */
+            powerupTime = 0;
+
             // Remove life from hearts
             livesUI.transform.GetChild(lives).localScale = Vector3.zero;
 
@@ -204,8 +209,6 @@ public class FPFellow : MonoBehaviour, FellowInterface
 
             // Re-enable collision with ghost
             Physics.IgnoreCollision(GetComponent<SphereCollider>(), ghostCollider, false);
-
-            yield break;
         }
     }
 
@@ -257,5 +260,10 @@ public class FPFellow : MonoBehaviour, FellowInterface
     public string GetDirection()
     {
         return direction;
+    }
+
+    public Collider GetCollider()
+    {
+        return controller;
     }
 }

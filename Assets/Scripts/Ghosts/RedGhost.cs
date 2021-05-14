@@ -179,12 +179,8 @@ public class RedGhost : MonoBehaviour, GhostInterface
             agent.acceleration = 8f;
             agent.angularSpeed = 120f;
 
-            // Enable collisions for all types of fellow
-            GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
-            foreach (GameObject fellow in fellows)
-            {
-                Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
-            }
+            // Enable collisions with fellow
+            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), player.GetCollider(), false);
         }
     }
 
@@ -203,12 +199,8 @@ public class RedGhost : MonoBehaviour, GhostInterface
         hasDied = true;
         GetComponent<Renderer>().material = deadMaterial; // Transparent material
 
-        // Disable collisions for all types of fellow
-        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
-        foreach (GameObject fellow in fellows)
-        {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), true);
-        }
+        // Disable collisions with fellow
+        Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), player.GetCollider(), true);
 
         // Increase speed so it returns to ghost house quicker
         agent.speed = 6f;
@@ -228,18 +220,15 @@ public class RedGhost : MonoBehaviour, GhostInterface
 
     public void ResetGhost()
     {
-        agent.enabled = false;
+        agent.enabled = false; // Ghost cannot move from maze to maze without NavMeshAgent first being disabled.
+        GetComponent<Rigidbody>().velocity = Vector3.zero; // Stop momentum from previous movement
         transform.position = startPos;
         GetComponent<Renderer>().material = normalMaterial;
         agent.enabled = true;
         ghostHouse = GameObject.Find("Maze" + game.CurrentMaze().ToString() + "GhostHouse"); // Update ghost house to current maze
-        
-        // Enable collisions for all types of fellow
-        GameObject[] fellows = GameObject.FindGameObjectsWithTag("Fellow");
-        foreach (GameObject fellow in fellows)
-        {
-            Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), fellow.GetComponent<Collider>(), false);
-        }
+
+        // Enable collisions with fellow
+        Physics.IgnoreCollision(GetComponent<CapsuleCollider>(), player.GetCollider(), false);
     }
 
     public bool HasRespawned()

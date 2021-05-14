@@ -83169,6 +83169,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   minimapCamera: {fileID: 606929735}
+  game: {fileID: 2024867684}
 --- !u!64 &2008500172
 MeshCollider:
   m_ObjectHideFlags: 0
